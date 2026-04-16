@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}师资管理 - 浙大继续教育师资管理系统{% endblock %}
+
+{% block content %}
+<!-- 搜索栏 -->
+<div class="search-bar">
+    <input type="text" name="keyword" placeholder="搜索教师姓名、专业领域、手机号..." value="{{ keyword }}">
+    <select name="type">
+        <option value="">全部类型</option>
+        <option value="校内" {% if type == '校内' %}selected{% endif %}>校内</option>
+        <option value="校外" {% if type == '校外' %}selected{% endif %}>校外</option>
+    </select>
+    <select name="level">
+        <option value="">全部级别</option>
+        <option value="普通" {% if level == '普通' %}selected{% endif %}>普通</option>
+        <option value="高级" {% if level == '高级' %}selected{% endif %}>高级</option>
+    </select>
+    <button type="button" class="btn btn-primary" onclick="search()">🔍 搜索</button>
+</div>
+
+<!-- 教师列表 -->
+<div class="data-table">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 60px;">ID</th>
+                <th style="width: 80px;">头像</th>
+                <th>姓名</th>
+                <th>专业领域</th>
+                <th>类型</th>
+                <th>级别</th>
+                <th>上课次数</th>
+                <th>评分</th>
+                <th>入库状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for teacher in teachers.items %}
+            <tr>
+                <td>{{ teacher.id }}</td>
+                <td>
+                    {% if teacher.avatar_url %}
+                    <img src="{{ teacher.avatar_url }}" style="width: 50px; height: 50px; border-radius: 4px; object-fit: cover;">
+                    {% else %}
+                    <div style="width: 50px; height: 50px; background: #e5e7eb; border-radius: 4px; display: flex; align-items: center; justify-content: center;">👤</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <strong>{{ teacher.name }}</strong>
+                    <div style="font-size: 12px; color: #999; margin-top: 4px;">{{ teacher.phone_masked }}</div>
+                </td>
+                <td>{{ teacher.field }}</td>
+                <td>
+                    {% if teacher.teacher_type == '校内' %}
+                    <span class="tag tag-blue">校内</span>
+                    {% else %}
+                    <span class="tag tag-yellow">校外</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if teacher.level == '高级' %}
+                    <span class="tag tag-blue">高级</span>
+                    {% else %}
+                    <span class="tag">普通</span>
+                    {% endif %}
+                </td>
+                <td>{{ teacher.total_teaching_count }}</td>
+                <td class="score">{{ teacher.overall_score }}</td>
+                <td>
+                    {% if teacher.is_in_storage %}
+                    <span class="tag tag-green">已入库</span>
+                    {% else %}
+                    <span class="tag tag-yellow">未入库</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="/teachers/{{ teacher.id }}" class="btn btn-primary" style="padding: 5px 15px;">查看</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页 -->
+{% if teachers.pages > 1 %}
+<div class="pagination">
+    {% if teachers.has_prev %}
+    <a href="?page={{ teachers.prev_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if level %}&level={{ level }}{% endif %}">上一页</a>
+    {% endif %}
+    
+    {% for page_num in teachers.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+        {% if page_num %}
+            {% if page_num == teachers.page %}
+            <a href="?page={{ page_num }}" class="active">{{ page_num }}</a>
+            {% else %}
+            <a href="?page={{ page_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if level %}&level={{ level }}{% endif %}">{{ page_num }}</a>
+            {% endif %}
+        {% else %}
+            <span>...</span>
+        {% endif %}
+    {% endfor %}
+    
+    {% if teachers.has_next %}
+    <a href="?page={{ teachers.next_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if level %}&level={{ level }}{% endif %}">下一页</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+function search() {
+    const keyword = document.querySelector('input[name="keyword"]').value;
+    const type = document.querySelector('select[name="type"]').value;
+    const level = document.querySelector('select[name="level"]').value;
+    
+    let url = '/teachers?';
+    if (keyword) url += 'keyword=' + encodeURIComponent(keyword) + '&';
+    if (type) url += 'type=' + encodeURIComponent(type) + '&';
+    if (level) url += 'level=' + encodeURIComponent(level) + '&';
+    
+    window.location.href = url;
+}
+
+// 回车搜索
+document.querySelector('input[name="keyword"]').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') search();
+});
+</script>
+{% endblock %}
