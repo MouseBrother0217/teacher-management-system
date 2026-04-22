@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}课表管理 - 系统管理中心{% endblock %}
+
+{% block content %}
+<!-- 搜索栏 -->
+<div class="card">
+    <div class="card-body">
+        <form method="get" action="/schedules" class="search-bar">
+            <select name="class_id" class="search-select">
+                <option value="">全部班级</option>
+                {% for cls in classes %}
+                <option value="{{ cls.id }}" {% if selected_class == cls.id|string %}selected{% endif %}>{{ cls.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="teacher_id" class="search-select">
+                <option value="">全部老师</option>
+                {% for t in teachers %}
+                <option value="{{ t.id }}" {% if selected_teacher == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="date" name="date" class="search-input" value="{{ selected_date }}">
+            <button type="submit" class="btn btn-primary">🔍 搜索</button>
+            <a href="/schedules" class="btn btn-default">重置</a>
+            <div style="flex: 1; text-align: right;">
+                <a href="/schedules/new" class="btn btn-primary">➕ 新增课表</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 课表列表 -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>上课时间</th>
+                    <th>课程名称</th>
+                    <th>所属班级</th>
+                    <th>类型</th>
+                    <th>授课老师</th>
+                    <th>场所</th>
+                    <th>人数</th>
+                    <th>评价率</th>
+                    <th>签到率</th>
+                    <th>课酬</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for schedule in schedules %}
+                <tr>
+                    <td>
+                        <div>{{ schedule.teaching_date.strftime('%Y-%m-%d') if schedule.teaching_date else '-' }}</div>
+                        <div style="font-size: 12px; color: #999;">{{ schedule.start_time or '-' }} - {{ schedule.end_time or '-' }}</div>
+                    </td>
+                    <td>
+                        <strong>{{ schedule.subject or '-' }}</strong>
+                    </td>
+                    <td>{{ schedule.class_name or '-' }}</td>
+                    <td>
+                        {% if schedule.class_type %}
+                        <span class="tag tag-blue">{{ schedule.class_type }}</span>
+                        {% else %}
+                        <span>-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ schedule.teacher_name or '待安排' }}</td>
+                    <td>{{ schedule.venue or '-' }}</td>
+                    <td style="text-align: center;">{{ schedule.student_count or 0 }}人</td>
+                    <td style="text-align: center;">
+                        {% if schedule.evaluation_rate > 0 %}
+                        <span style="color: #52c41a;">{{ "%.1f"|format(schedule.evaluation_rate * 100) }}%</span>
+                        {% else %}
+                        <span style="color: #999;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        {% if schedule.checkin_rate > 0 %}
+                        <span style="color: #52c41a;">{{ "%.1f"|format(schedule.checkin_rate * 100) }}%</span>
+                        {% else %}
+                        <span style="color: #999;">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if schedule.lecture_fee %}
+                        ¥{{ schedule.lecture_fee }}
+                        {% else %}
+                        <span style="color: #999;">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if schedule.status == '已完成' %}
+                        <span class="tag tag-green">已完成</span>
+                        {% elif schedule.status == '进行中' %}
+                        <span class="tag tag-blue">进行中</span>
+                        {% else %}
+                        <span class="tag tag-yellow">待上课</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/schedules/{{ schedule.id }}/edit" class="action-link">编辑</a>
+                        <a href="/schedules/{{ schedule.id }}/delete" class="action-link danger" onclick="return confirm('确定要删除该课表吗？')">删除</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if not schedules %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <p>暂无课表数据</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}学员管理 - 系统管理中心{% endblock %}
+
+{% block content %}
+<!-- 搜索栏 - 截图1:1风格 -->
+<div style="background: #fff; padding: 16px 24px; margin-bottom: 16px;">
+    <form method="get" action="/students" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        <input type="text" name="name" placeholder="姓名" value="{{ keyword }}"
+               style="width: 120px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        
+        <input type="text" name="phone" placeholder="手机号码" 
+               style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        
+        <input type="text" name="unit" placeholder="单位" 
+               style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        
+        <select name="class_id" style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; color: #666;">
+            <option value="">请选择班级</option>
+            {% for cls in classes %}
+            <option value="{{ cls.id }}" {% if selected_class == cls.id|string %}selected{% endif %}>{{ cls.name }}</option>
+            {% endfor %}
+        </select>
+        
+        <select name="province" style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; color: #666;">
+            <option value="">请选择省份</option>
+            <option value="浙江省" {% if province == '浙江省' %}selected{% endif %}>浙江省</option>
+            <option value="江苏省" {% if province == '江苏省' %}selected{% endif %}>江苏省</option>
+            <option value="上海市" {% if province == '上海市' %}selected{% endif %}>上海市</option>
+        </select>
+        
+        <select name="education" style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; color: #666;">
+            <option value="">请选择学历</option>
+            <option value="大专" {% if education == '大专' %}selected{% endif %}>大专</option>
+            <option value="本科" {% if education == '本科' %}selected{% endif %}>本科</option>
+            <option value="硕士" {% if education == '硕士' %}selected{% endif %}>硕士</option>
+            <option value="博士" {% if education == '博士' %}selected{% endif %}>博士</option>
+        </select>
+        
+        <select name="political_status" style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; color: #666;">
+            <option value="">请选择政治面貌</option>
+            <option value="党员" {% if political_status == '党员' %}selected{% endif %}>党员</option>
+            <option value="群众" {% if political_status == '群众' %}selected{% endif %}>群众</option>
+        </select>
+        
+        <button type="submit" style="padding: 6px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            🔍 搜索
+        </button>
+        
+        <button type="button" onclick="window.location.href='/students'" style="padding: 6px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            ⟳ 重置
+        </button>
+    </form>
+</div>
+
+<!-- 操作按钮栏 -->
+<div style="margin-bottom: 16px; display: flex; gap: 8px;">
+    <button onclick="window.location.href='/students/new'" style="padding: 8px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+        ➕ 新增学员
+    </button>
+    <button style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">
+        📥 导入学员
+    </button>
+    <button style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">
+        📤 导出学员
+    </button>
+</div>
+
+<!-- 学员数据表格 - 截图1:1复刻 -->
+<div style="background: #fff;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+            <tr style="background: #fafafa;">
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">姓名</th>
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">性别</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">手机号码</th>
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">参训次数</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">单位</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">职业</th>
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">省份/城市</th>
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 12px 16px;">
+                    <a href="/students/{{ student.id }}" style="color: #1890ff; text-decoration: none;">{{ student.name }}</a>
+                </td>
+                <td style="padding: 12px 16px; text-align: center;">
+                    {% if student.gender == '男' %}
+                    <span style="color: #1890ff;">♂</span>
+                    {% elif student.gender == '女' %}
+                    <span style="color: #ff4d4f;">♀</span>
+                    {% else %}
+                    <span style="color: #999;">-</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px 16px;">{{ student.phone or '-' }}</td>
+                <td style="padding: 12px 16px; text-align: center;">
+                    <span style="color: #1890ff; font-weight: 500;">{{ student.total_attendance or 1 }}</span>
+                </td>
+                <td style="padding: 12px 16px;">{{ student.company or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ student.job or '-' }}</td>
+                <td style="padding: 12px 16px; text-align: center;">
+                    {{ student.province or '' }}{% if student.province and student.city %}/{% endif %}{{ student.city or '' }}
+                </td>
+                <td style="padding: 12px 16px; text-align: center;">
+                    <a href="/students/{{ student.id }}/edit" style="color: #1890ff; text-decoration: none; font-size: 13px;">✎ 编辑</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if not students %}
+    <div style="padding: 60px 24px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
+        <p style="color: #999;">暂无学员数据</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 分页 -->
+{% if pagination and pagination.pages > 1 %}
+<div style="background: #fff; padding: 16px 24px; margin-top: 1px; display: flex; justify-content: flex-end;">
+    <div style="display: flex; gap: 8px; align-items: center;">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}" 
+           style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">上一页</a>
+        {% endif %}
+        
+        {% for page in pagination.pages_list %}
+            {% if page == '...' %}
+            <span style="padding: 6px 12px; color: #999;">...</span>
+            {% elif page == pagination.page %}
+            <span style="padding: 6px 12px; background: #1890ff; color: #fff; border-radius: 4px; font-size: 14px;">{{ page }}</span>
+            {% else %}
+            <a href="?page={{ page }}{% if keyword %}&keyword={{ keyword }}{% endif %}" 
+               style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">{{ page }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}" 
+           style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">下一页</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

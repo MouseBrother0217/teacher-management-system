@@ -1,0 +1,44 @@
+# 师资管理系统 - .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 虚拟环境
+venv/
+env/
+ENV/
+
+# 日志
+*.log
+ngrok.log
+flask.log
+lt.log
+
+# 数据库（保留结构，不提交数据）
+instance/*.db
+instance/*.sqlite3
+
+# 备份
+.backups/
+*.bak
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 大型数据文件
+data/teachers_data.json
+data/teachers_full.py
+data/imported_teachers.py
+data/imported_courses_classes.py
+data/real_evaluations.py
