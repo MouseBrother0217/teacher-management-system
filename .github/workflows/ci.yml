@@ -31,6 +31,15 @@ jobs:
       - name: Ensure instance directory exists
         run: mkdir -p teacher-management-system/instance
 
+      - name: Verify templates exist
+        run: |
+          echo "=== Templates directory ==="
+          ls -la teacher-management-system/templates/ || echo "templates dir not found"
+          echo "=== Classes templates ==="
+          ls -la teacher-management-system/templates/classes/ || echo "classes dir not found"
+          echo "=== Index.html ==="
+          ls -la teacher-management-system/templates/index.html || echo "index.html not found"
+
       - name: Run tests
         run: |
           cd teacher-management-system
