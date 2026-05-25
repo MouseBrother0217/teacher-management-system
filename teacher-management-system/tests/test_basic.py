@@ -20,6 +20,7 @@ def client():
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
     with app.app_context():
+        db.drop_all()   # 清除旧表结构
         db.create_all()  # 确保所有数据库表已创建
         with app.test_client() as client:
             yield client
