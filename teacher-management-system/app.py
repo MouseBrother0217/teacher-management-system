@@ -9842,7 +9842,15 @@ try:
     except Exception as e:
         print(f'⚠️ 导入导出蓝图注册失败: {e}')
     
-    print('✅ 蓝图注册成功 (14个蓝图: classrooms, sites, api, teachers, classes, courses, students, schedules, users, categories, compensations, approvals, home, import)')
+    # 注册 API v1 蓝图 (ADR-006)
+    try:
+        from routes.api_v1 import api_v1_bp
+        app.register_blueprint(api_v1_bp)
+        print('✅ API v1 蓝图注册成功')
+    except Exception as e:
+        print(f'⚠️ API v1 蓝图注册失败: {e}')
+    
+    print('✅ 蓝图注册成功 (15个蓝图: classrooms, sites, api, teachers, classes, courses, students, schedules, users, categories, compensations, approvals, home, import, api_v1)')
 except Exception as e:
     print(f'⚠️ 蓝图注册失败: {e}')
 
