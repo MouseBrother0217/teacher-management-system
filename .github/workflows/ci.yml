@@ -48,7 +48,8 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push'
+    # 暂时禁用 Docker 构建 —— 等需要 Docker 部署时，把下面这行改成: if: github.event_name == 'push'
+    if: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
