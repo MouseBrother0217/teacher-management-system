@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}师资管理 - 系统管理中心{% endblock %}
+
+{% block content %}
+<!-- Alpine.js 数据容器 -->
+<div x-data="teacherApp()" x-init="init()">
+    
+    <!-- 搜索栏 -->
+    <div style="background: #fff; padding: 16px 24px; margin-bottom: 16px;" class="search-bar">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; width: 100%;">
+            <input type="text" x-model="search.keyword" @input.debounce.300ms="filterTeachers()"
+                   placeholder="搜索讲师姓名、联系方式、简介、课程名称或课程简介..." 
+                   style="flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 16px;">
+            <select x-model="search.inStock" @change="filterTeachers()"
+                    style="flex: 1; min-width: 120px; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 16px; color: #666;">
+                <option value="">是否入库</option>
+                <option value="是">是</option>
+                <option value="否">否</option>
+            </select>
+            <select x-model="search.approvalStatus" @change="filterTeachers()"
+                    style="flex: 1; min-width: 120px; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 16px; color: #666;">
+                <option value="">审批状态</option>
+                <option value="已通过">已通过</option>
+                <option value="待审核">待审核</option>
+            </select>
+            <div style="display: flex; gap: 8px; width: 100%;">
+                <button @click="filterTeachers()" 
+                        style="flex: 1; padding: 10px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; min-height: 44px;">
+                    🔍 搜索
+                </button>
+                <button @click="resetSearch()" 
+                        style="flex: 1; padding: 10px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 16px; cursor: pointer; min-height: 44px;">
+                    ⟳ 重置
+                </button>
+            </div>
+        </div>
+        
+        <!-- 搜索结果统计 -->
+        <div style="margin-top: 12px; color: #666; font-size: 14px;">
+            <span x-show="isLoading" style="color: #1890ff;">⏳ 搜索中...</span>
+            <span x-show="!isLoading">
+                共 <strong x-text="filteredTeachers.length"></strong> 位讲师
+                <span x-show="search.keyword || search.inStock || search.approvalStatus" style="color: #999;">
+                    （筛选自 {{ pagination.total }} 位）
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <!-- 操作按钮栏 + 排序 -->
+    <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <button @click="window.location.href='/teachers/new'" class="btn btn-primary" style="padding: 10px 20px; font-size: 16px; min-height: 44px;">
+                ➕ 新增讲师
+            </button>
+        </div>
+        
+        <!-- 排序选项 -->
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            {% if session.get('role') in ['admin', 'center_director'] %}
+            <a href="/teachers/export{% if keyword %}?keyword={{ keyword }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}" 
+               class="btn btn-success hide-mobile" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                📊 导出Excel
+            </a>
+            {% endif %}
+            <span style="color: #666; font-size: 14px;">排序：</span>
+            <button @click="sortBy('score')" 
+                    :style="sort === 'score' ? 'padding: 6px 12px; background: #1890ff; color: #fff; border-radius: 4px; font-size: 13px; border: none; cursor: pointer;' : 'padding: 6px 12px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; cursor: pointer;'">
+                评分
+            </button>
+            <button @click="sortBy('count')" 
+                    :style="sort === 'count' ? 'padding: 6px 12px; background: #1890ff; color: #fff; border-radius: 4px; font-size: 13px; border: none; cursor: pointer;' : 'padding: 6px 12px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; cursor: pointer;'">
+                上课次数
+            </button>
+            <button @click="sortBy('name')" 
+                    :style="sort === 'name' ? 'padding: 6px 12px; background: #1890ff; color: #fff; border-radius: 4px; font-size: 13px; border: none; cursor: pointer;' : 'padding: 6px 12px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; cursor: pointer;'">
+                姓名
+            </button>
+            <button @click="sortBy('')" x-show="sort" 
+                    style="padding: 6px 12px; background: #fff; color: #999; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; cursor: pointer;">
+                取消
+            </button>
+        </div>
+    </div>
+
+    <!-- 师资卡片列表 - 响应式布局 -->
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        <template x-for="teacher in paginatedTeachers" :key="teacher.id">
+            <div class="teacher-card" style="background: #fff; padding: 16px; display: flex; align-items: flex-start; gap: 14px; cursor: pointer; transition: box-shadow 0.3s; border-radius: 8px;"
+                 @click="window.location.href='/teachers/' + teacher.id">
+                
+                <!-- 头像 -->
+                <div style="flex-shrink: 0;">
+                    <template x-if="teacher.avatar_url">
+                        <img :src="teacher.avatar_url" :alt="teacher.name" 
+                             style="width: 56px; height: 56px; border-radius: 4px; object-fit: cover; border: 1px solid #f0f0f0;">
+                    </template>
+                    <template x-if="!teacher.avatar_url">
+                        <div style="width: 56px; height: 56px; border-radius: 4px; background: #1890ff; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 500;"
+                             x-text="teacher.name ? teacher.name[0] : '?'">
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- 信息区 -->
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 16px; font-weight: 500; color: #333; margin-bottom: 6px;" x-text="teacher.name"></div>
+                    
+                    <div style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"
+                         x-text="teacher.introduction || teacher.organization || '暂无简介'"></div>
+                    
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <span x-show="teacher.status === '已入库' || teacher.in_stock" 
+                              style="padding: 2px 8px; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px;">已入库</span>
+                        <span x-show="teacher.approval_status === '已通过'" 
+                              style="padding: 2px 8px; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px;">已通过</span>
+                        <span x-show="teacher.approval_status === '待审核'" 
+                              style="padding: 2px 8px; background: #fffbe6; color: #faad14; border: 1px solid #ffe58f; border-radius: 4px; font-size: 12px;">待审核</span>
+                        <span x-show="teacher.course_count > 0" 
+                              style="padding: 2px 8px; background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; border-radius: 4px; font-size: 12px;"
+                              x-text="'📚 ' + teacher.course_count + ' 门课程'"></span>
+                    </div>
+                </div>
+                
+                <!-- 右侧评分和操作 -->
+                <div style="flex-shrink: 0; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid #ff4d4f; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #fff;">
+                        <span style="font-size: 16px; font-weight: 600; color: #ff4d4f;" x-text="teacher.evaluation_score || 10"></span>
+                    </div>
+                    <a :href="'/teachers/' + teacher.id + '/edit'" style="font-size: 13px; color: #1890ff; text-decoration: none; padding: 4px 8px;" @click.stop>
+                        ✎ 编辑
+                    </a>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- 空状态 -->
+    <div x-show="filteredTeachers.length === 0" style="background: #fff; padding: 60px 24px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">👨‍🏫</div>
+        <p style="color: #999; margin-bottom: 16px;">暂无匹配的师资数据</p>
+        <button @click="resetSearch()" style="padding: 8px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            ⟳ 清除筛选
+        </button>
+    </div>
+
+    <!-- 分页 -->
+    <div x-show="totalPages > 1" style="background: #fff; padding: 16px 24px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="color: #666; font-size: 14px;">
+            共 <strong x-text="filteredTeachers.length"></strong> 位讲师
+        </div>
+        
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button @click="goToPage(currentPage - 1)" :disabled="currentPage <= 1"
+                    style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; font-size: 14px; cursor: pointer;"
+                    :style="currentPage <= 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''">上一页</button>
+            
+            <span style="padding: 6px 12px; background: #1890ff; color: #fff; border-radius: 4px; font-size: 14px;" x-text="currentPage"></span>
+            <span style="color: #666; font-size: 14px;">/ <span x-text="totalPages"></span> 页</span>
+            
+            <button @click="goToPage(currentPage + 1)" :disabled="currentPage >= totalPages"
+                    style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; font-size: 14px; cursor: pointer;"
+                    :style="currentPage >= totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''">下一页</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function teacherApp() {
+    return {
+        // 原始数据（后端注入）
+        allTeachers: {{ teachers | tojson }},
+        
+        // 搜索状态
+        search: {
+            keyword: '{{ keyword or '' }}',
+            inStock: '{{ in_stock or '' }}',
+            approvalStatus: '{{ approval_status or '' }}'
+        },
+        
+        // 排序
+        sort: '{{ sort or '' }}',
+        
+        // 分页
+        currentPage: {{ pagination.page if pagination else 1 }},
+        perPage: {{ pagination.per_page if pagination else 20 }},
+        
+        // 状态
+        isLoading: false,
+        filteredTeachers: [],
+        
+        // 初始化
+        init() {
+            this.filterTeachers();
+        },
+        
+        // 过滤逻辑
+        filterTeachers() {
+            this.isLoading = true;
+            
+            let result = [...this.allTeachers];
+            
+            // 关键词搜索
+            if (this.search.keyword) {
+                const keywords = this.search.keyword.toLowerCase().split(/\s+/).filter(k => k);
+                result = result.filter(t => {
+                    const searchText = [
+                        t.name, t.field, t.title, t.specialty, 
+                        t.introduction, t.organization, t.phone
+                    ].join(' ').toLowerCase();
+                    return keywords.every(k => searchText.includes(k));
+                });
+            }
+            
+            // 入库筛选
+            if (this.search.inStock === '是') {
+                result = result.filter(t => t.status === '已入库' || t.in_stock);
+            } else if (this.search.inStock === '否') {
+                result = result.filter(t => t.status !== '已入库' && !t.in_stock);
+            }
+            
+            // 审批状态筛选
+            if (this.search.approvalStatus === '已通过') {
+                result = result.filter(t => t.status === '已入库' || t.approval_status === '已通过');
+            } else if (this.search.approvalStatus === '待审核') {
+                result = result.filter(t => t.approval_status === '待审核');
+            }
+            
+            // 排序
+            if (this.sort === 'score') {
+                result.sort((a, b) => (parseFloat(b.evaluation_score) || 0) - (parseFloat(a.evaluation_score) || 0));
+            } else if (this.sort === 'count') {
+                result.sort((a, b) => (parseInt(b.teaching_count) || 0) - (parseInt(a.teaching_count) || 0));
+            } else if (this.sort === 'name') {
+                result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            }
+            
+            this.filteredTeachers = result;
+            this.currentPage = 1; // 重置到第一页
+            this.isLoading = false;
+        },
+        
+        // 重置搜索
+        resetSearch() {
+            this.search.keyword = '';
+            this.search.inStock = '';
+            this.search.approvalStatus = '';
+            this.sort = '';
+            this.filterTeachers();
+        },
+        
+        // 排序
+        sortBy(field) {
+            this.sort = this.sort === field ? '' : field;
+            this.filterTeachers();
+        },
+        
+        // 分页数据
+        get paginatedTeachers() {
+            const start = (this.currentPage - 1) * this.perPage;
+            const end = start + this.perPage;
+            return this.filteredTeachers.slice(start, end);
+        },
+        
+        // 总页数
+        get totalPages() {
+            return Math.ceil(this.filteredTeachers.length / this.perPage) || 1;
+        },
+        
+        // 跳转页面
+        goToPage(page) {
+            if (page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+            }
+        }
+    }
+}
+</script>
+
+<style>
+.btn {
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+    border: none;
+}
+.btn-primary {
+    background: #1890ff;
+    color: #fff;
+}
+.btn-success {
+    background: #52c41a;
+    color: #fff;
+}
+.btn-default {
+    background: #fff;
+    color: #666;
+    border: 1px solid #d9d9d9;
+}
+.btn-sm {
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+/* 卡片悬停效果 */
+.teacher-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

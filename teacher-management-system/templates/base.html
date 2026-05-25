@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}师资管理系统{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+        }
+        
+        /* 顶部Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            color: white;
+            transition: background 0.3s;
+        }
+        
+        .mobile-menu-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background 0.3s;
+            color: white;
+        }
+        
+        .user-info:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 64px;
+            bottom: 0;
+            width: 200px;
+            background: #fff;
+            border-right: 1px solid #f0f0f0;
+            overflow-y: auto;
+            z-index: 99;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-section {
+            margin: 8px 0;
+        }
+        
+        .menu-title {
+            padding: 8px 24px;
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            color: #333;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .menu-item:hover {
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+        
+        .menu-item.active {
+            color: #1890ff;
+            background: linear-gradient(90deg, #e6f7ff 0%, #fff 100%);
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+        
+        .menu-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            margin-left: 200px;
+            margin-top: 64px;
+            padding: 24px;
+            min-height: calc(100vh - 64px);
+        }
+        
+        /* 卡片样式 */
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(90deg, #fafafa 0%, #fff 100%);
+        }
+        
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .card-body {
+            padding: 24px;
+        }
+        
+        /* 搜索栏 */
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        
+        .search-input {
+            padding: 10px 16px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 240px;
+            transition: all 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #1890ff;
+            box-shadow: 0 0 0 3px rgba(24,144,255,0.1);
+        }
+        
+        .search-select {
+            padding: 10px 16px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            min-width: 140px;
+            transition: all 0.3s;
+        }
+        
+        .search-select:focus {
+            outline: none;
+            border-color: #1890ff;
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 2px 6px rgba(24,144,255,0.3);
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+            box-shadow: 0 4px 12px rgba(24,144,255,0.4);
+        }
+        
+        .btn-default {
+            background: white;
+            color: #333;
+            border-color: #d9d9d9;
+        }
+        
+        .btn-default:hover {
+            color: #1890ff;
+            border-color: #1890ff;
+            background: #f6fffe;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 2px 6px rgba(82,196,26,0.3);
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, #73d13d 0%, #52c41a 100%);
+            box-shadow: 0 4px 12px rgba(82,196,26,0.4);
+        }
+        
+        /* 表格样式 */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .data-table th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table tbody tr {
+            transition: background 0.2s;
+        }
+        
+        .data-table tbody tr:hover {
+            background: #e6f7ff;
+        }
+        
+        /* 标签 */
+        .tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .tag-green {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        
+        .tag-blue {
+            background: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+        
+        .tag-yellow {
+            background: #fffbe6;
+            color: #faad14;
+            border: 1px solid #ffe58f;
+        }
+        
+        .tag-red {
+            background: #fff1f0;
+            color: #ff4d4f;
+            border: 1px solid #ffa39e;
+        }
+        
+        .tag-purple {
+            background: #f9f0ff;
+            color: #722ed1;
+            border: 1px solid #d3adf7;
+        }
+        
+        .tag-gray {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #d9d9d9;
+        }
+        
+        /* 分页 */
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+        
+        .pagination a,
+        .pagination span {
+            padding: 8px 14px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .pagination a:hover {
+            color: #1890ff;
+            border-color: #1890ff;
+            background: #e6f7ff;
+        }
+        
+        .pagination .active {
+            background: #1890ff;
+            color: white;
+            border-color: #1890ff;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        /* 遮罩层 */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 98;
+            backdrop-filter: blur(2px);
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        /* 加载动画 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 9999;
+        }
+        
+        .loading-overlay.active {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1890ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 16px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* Toast提示 */
+        .toast {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            padding: 14px 24px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 1001;
+            min-width: 280px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.show {
+            display: flex;
+        }
+        
+        .toast.success {
+            border-left: 4px solid #52c41a;
+        }
+        
+        .toast.error {
+            border-left: 4px solid #ff4d4f;
+        }
+        
+        .toast.info {
+            border-left: 4px solid #1890ff;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* 页面切换动画 */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 响应式断点 */
+        
+        /* 平板 (768px - 1024px) */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 180px;
+            }
+            .main-content {
+                margin-left: 180px;
+            }
+            .search-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-input {
+                width: 100%;
+            }
+        }
+        
+        /* 小平板和大手机 (640px - 768px) */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 260px;
+                transform: translateX(-100%);
+                box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+            .header {
+                padding: 0 16px;
+            }
+            .header-title {
+                font-size: 16px;
+            }
+            .card-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+            .data-table {
+                min-width: 600px;
+            }
+            .btn {
+                padding: 8px 16px;
+            }
+        }
+        
+        /* 手机 (小于640px) */
+        @media (max-width: 640px) {
+            .main-content {
+                padding: 8px;
+                margin-top: 56px;
+            }
+            .header {
+                height: 56px;
+            }
+            .card {
+                border-radius: 8px;
+                margin-bottom: 12px;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            }
+            .card-body {
+                padding: 12px;
+            }
+            .card-header {
+                padding: 12px 16px;
+                font-size: 15px;
+            }
+            .card-title {
+                font-size: 15px;
+            }
+            .pagination {
+                justify-content: center;
+                gap: 4px;
+                flex-wrap: wrap;
+            }
+            .pagination a,
+            .pagination span {
+                padding: 8px 12px;
+                font-size: 14px;
+                min-width: 36px;
+                text-align: center;
+            }
+            .btn-full-mobile {
+                width: 100%;
+                justify-content: center;
+            }
+            .hide-mobile {
+                display: none !important;
+            }
+            .user-info span {
+                display: none;
+            }
+            .toast {
+                left: 12px;
+                right: 12px;
+                bottom: 80px;
+                min-width: auto;
+                font-size: 14px;
+            }
+            
+            /* 触摸友好的按钮 */
+            .btn, button, [type="submit"] {
+                min-height: 44px;
+                font-size: 15px;
+            }
+            
+            /* 触摸友好的输入框 */
+            input, select, textarea {
+                min-height: 44px;
+                font-size: 16px !important; /* 防止iOS缩放 */
+                padding: 10px 14px;
+            }
+            
+            /* 表格横向滚动提示 */
+            .table-wrapper {
+                position: relative;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -12px;
+                padding: 0 12px;
+            }
+            .table-wrapper::after {
+                content: '👈 左右滑动查看更多';
+                display: block;
+                text-align: center;
+                font-size: 12px;
+                color: #999;
+                padding: 8px 0;
+            }
+            
+            /* 搜索栏垂直堆叠 */
+            .search-bar {
+                flex-direction: column !important;
+                gap: 8px !important;
+            }
+            .search-bar input,
+            .search-bar select,
+            .search-bar button {
+                width: 100% !important;
+                min-width: auto !important;
+            }
+            
+            /* 底部固定操作栏 */
+            .mobile-action-bar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: #fff;
+                border-top: 1px solid #f0f0f0;
+                padding: 10px 16px;
+                display: flex;
+                gap: 10px;
+                z-index: 98;
+                box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+            }
+            .mobile-action-bar .btn {
+                flex: 1;
+                justify-content: center;
+            }
+            .has-mobile-action-bar {
+                padding-bottom: 70px;
+            }
+            
+            /* 模态框全屏 */
+            .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                border-radius: 12px 12px 0 0 !important;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: auto !important;
+                max-height: 85vh !important;
+                overflow-y: auto !important;
+            }
+            
+            /* 数据表格改为卡片列表 */
+            .mobile-card-list {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .mobile-card-item {
+                background: #fff;
+                border-radius: 8px;
+                padding: 14px 16px;
+                border: 1px solid #f0f0f0;
+            }
+            .mobile-card-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 6px 0;
+                border-bottom: 1px solid #f8f8f8;
+            }
+            .mobile-card-row:last-child {
+                border-bottom: none;
+            }
+            .mobile-card-label {
+                font-size: 13px;
+                color: #999;
+            }
+            .mobile-card-value {
+                font-size: 14px;
+                color: #333;
+                font-weight: 500;
+            }
+            .mobile-card-actions {
+                display: flex;
+                gap: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid #f0f0f0;
+            }
+            .mobile-card-actions .btn {
+                flex: 1;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            /* 桌面端表格 vs 手机端卡片 */
+            .desktop-table { display: table; }
+            .mobile-card-list { display: none; }
+            
+            @media (max-width: 640px) {
+                .desktop-table { display: none !important; }
+                .mobile-card-list { display: flex !important; }
+            }
+            
+            /* 表单单列 */
+            .form-grid {
+                grid-template-columns: 1fr !important;
+                gap: 14px !important;
+            }
+            .form-group-full {
+                grid-column: span 1 !important;
+            }
+            
+            /* 下拉搜索框更大 */
+            .search-dropdown {
+                max-height: 60vh !important;
+            }
+            
+            /* 标签更大 */
+            .tag {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+            
+            /* 状态徽章 */
+            .status-badge {
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+        }
+        
+        /* 操作链接 */
+        .action-link {
+            color: #1890ff;
+            text-decoration: none;
+            margin-right: 12px;
+            transition: color 0.2s;
+        }
+        
+        .action-link:hover {
+            color: #40a9ff;
+            text-decoration: underline;
+        }
+        
+        .action-link.danger {
+            color: #ff4d4f;
+        }
+        
+        .action-link.danger:hover {
+            color: #ff7875;
+        }
+        
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- 加载动画 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">加载中...</div>
+    </div>
+    
+    <!-- Toast提示 -->
+    <div class="toast" id="toast">
+        <span id="toastIcon">✓</span>
+        <span id="toastMessage">操作成功</span>
+    </div>
+    
+    <!-- 顶部Header -->
+    <div class="header">
+        <div class="header-left">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="logo-icon">学</div>
+            <span class="header-title">系统管理中心</span>
+        </div>
+        <div class="header-right">
+            {% if session.get('user_id') %}
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="user-info" style="cursor: default;">
+                    <div class="user-avatar">{{ session.get('name', '用')[0] }}</div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                        <span style="font-size: 14px; font-weight: 500;">{{ session.get('name', '用户') }}</span>
+                        <span style="font-size: 11px; opacity: 0.8;">{{ session.get('role_label', '') }}</span>
+                    </div>
+                </div>
+                <a href="/api/auth/web-logout" style="color: white; text-decoration: none; font-size: 13px; padding: 4px 8px; background: rgba(255,255,255,0.2); border-radius: 4px;">>
+                    退出
+                </a>
+            </div>
+            {% else %}
+            <a href="/api/auth/web-login" style="color: white; text-decoration: none; font-size: 14px; padding: 8px 16px; background: rgba(255,255,255,0.2); border-radius: 4px;">
+                登录
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 遮罩层 -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <div class="menu-section">
+            <a href="/" class="menu-item {% if '/' in request.path %}active{% endif %}">
+                <span class="menu-icon">📊</span>
+                <span>首页</span>
+            </a>
+        </div>
+        
+        {% if session.get('role') in ['admin', 'center_director', 'project_manager', 'class_advisor', 'finance_admin'] %}
+        <div class="menu-section">
+            <div class="menu-title">教务管理</div>
+            
+            {% if session.get('role') in ['admin', 'center_director', 'finance_admin'] %}
+            <a href="/categories" class="menu-item {% if '/categories' in request.path %}active{% endif %}">
+                <span class="menu-icon">📁</span>
+                <span>班级分类</span>
+            </a>
+            {% endif %}
+            
+            {% if session.get('role') in ['admin', 'center_director'] %}
+            <a href="/classrooms" class="menu-item {% if '/classrooms' in request.path %}active{% endif %}">
+                <span class="menu-icon">🏫</span>
+                <span>教室管理</span>
+            </a>
+            <a href="/sites" class="menu-item {% if '/sites' in request.path %}active{% endif %}">
+                <span class="menu-icon">🌐</span>
+                <span>现场教学</span>
+            </a>
+            {% endif %}
+            
+            {% if session.get('role') in ['admin', 'center_director', 'project_manager', 'class_advisor', 'teacher'] %}
+            <a href="/teachers" class="menu-item {% if '/teachers' in request.path and '/teacher-categories' not in request.path %}active{% endif %}">
+                <span class="menu-icon">👨‍🏫</span>
+                <span>师资管理</span>
+            </a>
+            {% endif %}
+            
+            {% if session.get('role') in ['admin', 'center_director', 'project_manager', 'class_advisor'] %}
+            <a href="/classes" class="menu-item {% if '/classes' in request.path %}active{% endif %}">
+                <span class="menu-icon">📚</span>
+                <span>班级管理</span>
+            </a>
+            {% endif %}
+            
+            {% if session.get('role') in ['admin', 'center_director', 'project_manager', 'class_advisor', 'teacher', 'student'] %}
+            <a href="/schedules" class="menu-item {% if '/schedules' in request.path %}active{% endif %}">
+                <span class="menu-icon">📅</span>
+                <span>课表管理</span>
+            </a>
+            {% endif %}
+            
+            {% if session.get('role') in ['admin', 'center_director', 'project_manager', 'class_advisor'] %}
+            <a href="/students" class="menu-item {% if '/students' in request.path %}active{% endif %}">
+                <span class="menu-icon">👥</span>
+                <span>学员管理</span>
+            </a>
+            {% endif %}
+            
+            {% if session.get('role') in ['admin', 'center_director', 'project_manager', 'class_advisor', 'teacher'] %}
+            <a href="/courses" class="menu-item {% if '/courses' in request.path %}active{% endif %}">
+                <span class="menu-icon">📖</span>
+                <span>课程管理</span>
+            </a>
+            {% endif %}
+            
+            {% if session.get('role') in ['admin', 'center_director', 'finance_admin'] %}
+            <a href="/compensations" class="menu-item {% if '/compensations' in request.path %}active{% endif %}">
+                <span class="menu-icon">💰</span>
+                <span>课酬管理</span>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if session.get('role') in ['admin', 'center_director', 'finance_admin'] %}
+        <div class="menu-section">
+            <div class="menu-title">审批管理</div>
+            <a href="/approvals/compensation" class="menu-item {% if '/approvals/compensation' in request.path %}active{% endif %}">
+                <span class="menu-icon">✅</span>
+                <span>课酬审批</span>
+            </a>
+            <a href="/approvals/teacher" class="menu-item {% if '/approvals/teacher' in request.path %}active{% endif %}">
+                <span class="menu-icon">📝</span>
+                <span>讲师审批</span>
+            </a>
+            <a href="/approvals/site" class="menu-item {% if '/approvals/site' in request.path %}active{% endif %}">
+                <span class="menu-icon">🌐</span>
+                <span>现场教学审批</span>
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if session.get('role') in ['admin', 'center_director'] %}
+        <div class="menu-section">
+            <div class="menu-title">系统管理</div>
+            <a href="/users" class="menu-item {% if '/users' in request.path %}active{% endif %}">
+                <span class="menu-icon">⚙️</span>
+                <span>用户权限管理</span>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+<!-- 主内容区 -->
+    <div class="main-content fade-in">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <script>
+        // 移动端菜单切换
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+        
+        // 显示加载动画
+        function showLoading(text = '加载中...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingText = overlay.querySelector('.loading-text');
+            loadingText.textContent = text;
+            overlay.classList.add('active');
+        }
+        
+        // 隐藏加载动画
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('active');
+        }
+        
+        // 显示Toast提示
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toast.className = 'toast ' + type;
+            toastMessage.textContent = message;
+            
+            if (type === 'success') {
+                toastIcon.textContent = '✓';
+            } else if (type === 'error') {
+                toastIcon.textContent = '✗';
+            } else {
+                toastIcon.textContent = 'ℹ';
+            }
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为所有链接添加点击加载效果
+            document.querySelectorAll('a[href^="/"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // 排除特殊链接
+                    if (this.getAttribute('href').startsWith('/teachers/export')) return;
+                    if (this.getAttribute('onclick')) return;
+                    
+                    showLoading('页面加载中...');
+                });
+            });
+            
+            // 为所有表单添加提交加载效果
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function() {
+                    showLoading('处理中...');
+                });
+            });
+            
+            // 页面加载完成后隐藏加载动画
+            window.addEventListener('load', hideLoading);
+        });
+        
+        // 监听窗口大小变化，在大屏幕上自动关闭移动端菜单
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Alpine.js 轻量交互框架 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>
