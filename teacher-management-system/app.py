@@ -9836,7 +9836,9 @@ try:
     
     # 注册导入导出蓝图 (ADR-005)
     try:
-        from routes.import import import_bp
+        import importlib
+        import_module = importlib.import_module('routes.data_import')
+        import_bp = getattr(import_module, 'import_bp')
         app.register_blueprint(import_bp)
         print('✅ 导入导出蓝图注册成功')
     except Exception as e:

@@ -28,7 +28,7 @@ def _get_globals():
 # ==================== 班级列表 ====================
 
 @classes_bp.route('/')
-def list():
+def classes_list():
     """班级管理列表 - 从数据库读取"""
     from models import ClassInfo
     
@@ -132,14 +132,14 @@ def detail(id):
     
     if not class_obj:
         flash('班级不存在', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     # 权限检查：班主任只能看自己负责的班级
     user_role = session.get('role', '')
     user_name = session.get('name', '')
     if user_role == 'class_advisor' and class_obj.get('class_advisor') != user_name:
         flash('无权访问：这不是您负责的班级', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     # 获取该班级的课表
     class_schedules = [s for s in schedules if s['class_id'] == id]
@@ -190,12 +190,17 @@ def new():
         for slots in daily_slots.values():
             all_used_slots.update(slots)
         
+        # 转换集合为列表（避免list内置函数被覆盖的问题）
+        time_slots_list = []
+        for slot in all_used_slots:
+            time_slots_list.append(slot)
+        
         new_class = {
             'id': len(classes) + 1,
             'name': request.form.get('name') or '未命名班级',
             'category_id': int(request.form.get('category_id', 0)),
             'category_name': next((c['name'] for c in g['teacher_categories'] if c['id'] == int(request.form.get('category_id', 0))), None),
-            'time_slots': sorted(list(all_used_slots)),
+            'time_slots': sorted(time_slots_list) if time_slots_list else ['morning', 'afternoon'],
             'start_date': datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None,
             'end_date': datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None,
             'status': '待开班',
@@ -247,14 +252,14 @@ def edit(id):
     class_obj = next((c for c in classes if c['id'] == id), None)
     if not class_obj:
         flash('班级不存在', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     # 权限检查
     user_role = session.get('role', '')
     user_name = session.get('name', '')
     if user_role == 'class_advisor' and class_obj.get('class_advisor') != user_name:
         flash('无权编辑：这不是您负责的班级', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     if request.method == 'POST':
         # 日期逻辑校验
@@ -332,7 +337,7 @@ def edit(id):
                 db.session.rollback()
                 print(f"[WARN] 确认完成时更新数据库失败: {e}")
             flash('班级已确认完成！', 'success')
-            return redirect(url_for('classes.list'))
+            return redirect(url_for('classes.classes_list'))
         
         return redirect(url_for('classes.edit', id=id))
     
@@ -354,7 +359,7 @@ def delete(id):
         flash('班级删除成功', 'success')
     else:
         flash('班级不存在', 'error')
-    return redirect(url_for('classes.list'))
+    return redirect(url_for('classes.classes_list'))
 
 
 # ==================== 生成课表 ====================
@@ -371,7 +376,7 @@ def generate_schedule(id):
     class_obj = next((c for c in classes if c['id'] == id), None)
     if not class_obj:
         flash('班级不存在', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     # 检查是否还有未安排的课程（现场教学不需要老师）
     site_names = [s['name'] for s in teaching_sites]
@@ -405,7 +410,7 @@ def schedule(id):
     class_obj = next((c for c in classes if c['id'] == id), None)
     if not class_obj:
         flash('班级不存在', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     # 时段配置
     slot_config = {
@@ -428,8 +433,13 @@ def schedule(id):
         for slots in daily_slots.values():
             all_used_slots.update(slots)
         
+        # 转换集合为列表（避免list内置函数被覆盖的问题）
+        time_slots_list = []
+        for slot in all_used_slots:
+            time_slots_list.append(slot)
+        
         # 更新班级的时段信息
-        class_obj['time_slots'] = sorted(list(all_used_slots))
+        class_obj['time_slots'] = sorted(time_slots_list) if time_slots_list else class_obj.get('time_slots', ['morning', 'afternoon'])
         
         # 清除该班级现有的课表记录
         import sys
@@ -513,7 +523,7 @@ def import_students(id):
     class_obj = next((c for c in classes if c['id'] == id), None)
     if not class_obj:
         flash('班级不存在', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     if request.method == 'POST':
         # 检查是否是Excel文件上传
@@ -653,7 +663,7 @@ def checklist(id):
     
     if not class_obj:
         flash('班级不存在', 'error')
-        return redirect(url_for('classes.list'))
+        return redirect(url_for('classes.classes_list'))
     
     # 初始化清单
     g['init_class_checklist'](id)
