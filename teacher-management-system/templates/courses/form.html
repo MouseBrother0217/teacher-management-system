@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if course %}编辑课程{% else %}新增课程{% endif %} - 系统管理中心{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">{% if course %}✏️ 编辑课程{% else %}➕ 新增课程{% endif %}</span>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% if course %}/courses/{{ course.id }}/edit{% else %}/courses/new{% endif %}">
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="form-group form-group-full">
+                        <label class="form-label">课程名称 <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-input" value="{{ course.name if course else '' }}" placeholder="如：领导力基础" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">课程分类</label>
+                        <select name="category_id" class="form-select">
+                            <option value="">请选择</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if course and course.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">课时</label>
+                        <input type="number" name="duration" class="form-input" value="{{ course.duration if course else '' }}" placeholder="0">
+                    </div>
+                    
+                    <div class="form-group form-group-full">
+                        <label class="form-label">课程描述</label>
+                        <textarea name="description" class="form-textarea" rows="4" placeholder="课程内容简介、教学目标、适合人群等">{{ course.description if course else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 保存</button>
+                <a href="/courses" class="btn btn-default">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-section {
+    margin-bottom: 32px;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 24px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-group-full {
+    grid-column: span 2;
+}
+.form-label {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.required {
+    color: #ff4d4f;
+}
+.form-input,
+.form-select,
+.form-textarea {
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: #1890ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+}
+</style>
+{% endblock %}

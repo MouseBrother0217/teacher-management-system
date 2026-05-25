@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if category %}编辑分类{% else %}新增分类{% endif %} - 系统管理中心{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">{% if category %}✏️ 编辑分类{% else %}➕ 新增分类{% endif %}</span>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% if category %}/categories/{{ category.id }}/edit{% else %}/categories/new{% endif %}">
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">分类名称 <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-input" value="{{ category.name if category else '' }}" placeholder="如：管理类" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">上级分类</label>
+                        <select name="parent_id" class="form-select">
+                            <option value="">无（顶级分类）</option>
+                            {% for cat in all_categories %}
+                                {% if not category or cat.id != category.id %}
+                                <option value="{{ cat.id }}" {% if category and category.parent_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group form-group-full">
+                        <label class="form-label">分类描述</label>
+                        <textarea name="description" class="form-textarea" rows="3" placeholder="该分类的说明描述">{{ category.description if category else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 保存</button>
+                <a href="/categories" class="btn btn-default">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-section {
+    margin-bottom: 32px;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 24px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-group-full {
+    grid-column: span 2;
+}
+.form-label {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.required {
+    color: #ff4d4f;
+}
+.form-input,
+.form-select,
+.form-textarea {
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: #1890ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+.form-textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+}
+</style>
+{% endblock %}

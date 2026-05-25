@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ site.name }} - 现场教学详情{% endblock %}
+
+{% block content %}
+<!-- 基本信息 -->
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">{{ site.name }}</h1>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span class="tag tag-blue">{{ site.type }}</span>
+                    {% if site.audit_status == '已通过' %}
+                    <span class="tag tag-green">已通过</span>
+                    {% elif site.audit_status == '待审核' %}
+                    <span class="tag tag-yellow">待审核</span>
+                    {% else %}
+                    <span class="tag tag-red">未通过</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="/sites/{{ site.id }}/edit" class="btn btn-primary">编辑</a>
+                <a href="/sites/{{ site.id }}/delete" class="btn btn-default" onclick="return confirm('确定要删除该教学点吗？')">删除</a>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">供应商</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ site.supplier or '-' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">联系人</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ site.contact_name or '-' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">联系电话</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ site.contact_phone or '-' }}</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 16px;">
+            <div style="font-size: 12px; color: #999; margin-bottom: 4px;">详细地址</div>
+            <div style="font-size: 16px; font-weight: 500;">{{ site.address or '-' }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- 费用说明 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">💰 费用说明</span>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;">
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">参考费用</div>
+                <div style="font-size: 24px; font-weight: 600; color: #ff4d4f;">¥{{ site.price or 0 }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">费用说明</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ site.price_note or '含场地费、讲解费、设备使用费' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 详细介绍 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">📝 详细介绍</span>
+    </div>
+    <div class="card-body">
+        <p style="line-height: 1.8; color: #333;">
+            {{ site.description or '该教学点具有丰富的教学资源和专业的讲解团队，适合开展各类现场教学活动。' }}
+        </p>
+    </div>
+</div>
+
+<!-- 现场图片 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">📷 现场图片</span>
+    </div>
+    <div class="card-body">
+        {% if site.images %}
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+            {% for img in site.images %}
+            <div style="border-radius: 8px; overflow: hidden;">
+                <img src="{{ img }}" style="width: 100%; height: 200px; object-fit: cover;">
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 40px;">
+            <div class="empty-icon" style="font-size: 48px;">📷</div>
+            <p style="color: #999;">暂无现场图片</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 上课情况 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">📅 上课情况</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>上课时间</th>
+                    <th>班级名称</th>
+                    <th>项目主任</th>
+                    <th>班主任</th>
+                    <th>上课人数</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in site_records %}
+                <tr>
+                    <td>
+                        <div>{{ record.teaching_date.strftime('%Y-%m-%d') if record.teaching_date else '-' }}</div>
+                        <div style="font-size: 12px; color: #999;">{{ record.start_time or '-' }} - {{ record.end_time or '-' }}</div>
+                    </td>
+                    <td>{{ record.class_name or '-' }}</td>
+                    <td>{{ record.director or '-' }}</td>
+                    <td>{{ record.teacher_manager or '-' }}</td>
+                    <td>{{ record.student_count or 0 }} 人</td>
+                    <td>
+                        {% if record.status == '已完成' %}
+                        <span class="tag tag-green">已完成</span>
+                        {% elif record.status == '进行中' %}
+                        <span class="tag tag-blue">进行中</span>
+                        {% else %}
+                        <span class="tag tag-yellow">待上课</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if not site_records %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <p>暂无上课记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 教师评价 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">⭐ 教师评价</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if site_evaluations %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>评价时间</th>
+                    <th>评价人</th>
+                    <th>所属班级</th>
+                    <th>评分</th>
+                    <th>评论内容</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for eval in site_evaluations %}
+                <tr>
+                    <td>{{ eval.created_at.strftime('%Y-%m-%d') if eval.created_at else '-' }}</td>
+                    <td>{{ eval.evaluator_name or '-' }}</td>
+                    <td>{{ eval.class_name or '-' }}</td>
+                    <td>
+                        <span style="color: #ff4d4f; font-weight: 600;">{{ eval.score or 0 }} 分</span>
+                    </td>
+                    <td>{{ eval.content or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon" style="font-size: 48px;">⭐</div>
+            <p style="color: #999;">暂无评价</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1022 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if schedule %}编辑课表{% else %}安排课程{% endif %} - {{ class_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">
+            {% if schedule %}✏️ 编辑课程安排{% else %}➕ 安排课程{% endif %}
+        </span>
+        {% if class_name %}
+        <span style="color: #666; font-size: 14px;">班级：{{ class_name }}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <form method="post"
+              action="{% if schedule %}/schedules/{{ schedule.id }}/edit{% else %}/schedules/new{% endif %}"
+              id="scheduleForm">
+
+            <input type="hidden" name="class_id" value="{{ preselected_class_id or (schedule.class_id if schedule else '') or '' }}">
+            <input type="hidden" name="teacher_id" id="teacherIdInput" value="{{ schedule.teacher_id if schedule and schedule.teacher_id else '' }}">
+            <input type="hidden" name="subject" id="subjectInput" value="{{ schedule.subject if schedule else '' }}">
+
+            <!-- 基本信息 -->
+            <div class="form-section">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #333;">📅 上课信息</h3>
+                <div class="form-grid">
+                    <!-- 编辑模式：日期只读 -->
+                    {% if schedule %}
+                    <div class="form-group">
+                        <label class="form-label">上课日期</label>
+                        <div class="form-input" style="background: #f5f5f5; color: #666; cursor: not-allowed;">
+                            {{ schedule.teaching_date.strftime('%Y-%m-%d') if schedule and schedule.teaching_date else '-' }}
+                        </div>
+                        <input type="hidden" name="teaching_date" value="{{ schedule.teaching_date.strftime('%Y-%m-%d') if schedule and schedule.teaching_date else '' }}">
+                    </div>
+                    {% else %}
+                    <div class="form-group">
+                        <label class="form-label">上课日期 <span class="required">*</span></label>
+                        <input type="date" name="teaching_date" class="form-input" id="teachingDateInput"
+                               value="{{ preselected_date or '' }}" required>
+                    </div>
+                    {% endif %}
+
+                    <!-- 编辑模式：时段只读 -->
+                    {% if schedule %}
+                    <div class="form-group">
+                        <label class="form-label">上课时段</label>
+                        <div class="form-input" style="background: #f5f5f5; color: #666; cursor: not-allowed;">
+                            {{ schedule.time_slot_name or '上午' }} ({{ schedule.start_time or '08:30' }} - {{ schedule.end_time or '12:00' }})
+                        </div>
+                        <input type="hidden" name="time_slot" value="{{ schedule.time_slot or 'morning' }}">
+                    </div>
+                    {% else %}
+                    <div class="form-group">
+                        <label class="form-label">上课时段 <span class="required">*</span></label>
+                        <select name="time_slot" class="form-select" id="timeSlotSelect" required>
+                            <option value="">请选择时段</option>
+                            <option value="morning" {% if preselected_slot == 'morning' %}selected{% endif %}>上午 (08:30-12:00)</option>
+                            <option value="afternoon" {% if preselected_slot == 'afternoon' %}selected{% endif %}>下午 (14:00-17:30)</option>
+                            <option value="fullday" {% if preselected_slot == 'fullday' %}selected{% endif %}>全天 (08:30-17:30)</option>
+                            <option value="evening" {% if preselected_slot == 'evening' %}selected{% endif %}>晚上 (18:30-21:00)</option>
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label class="form-label">课程状态</label>
+                        <div id="autoStatusBadge" class="status-badge status-pending">待上课</div>
+                        <input type="hidden" name="status" value="待上课">
+                    </div>
+
+                    <div class="form-group" style="position: relative;">
+                        <label class="form-label">上课地点 <span class="required">*</span></label>
+                        <input type="text" id="locationSearch" class="form-input" 
+                               placeholder="输入教室名称或现场教学点名称搜索..." 
+                               value="{{ schedule.location if schedule else '' }}"
+                               autocomplete="off" required>
+                        <input type="hidden" name="location" id="locationValue" value="{{ schedule.location if schedule else '' }}">
+                        <div id="locationResults" class="search-dropdown" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 老师与课程 / 现场教学 —— 一个搜索框 -->
+            <div class="form-section" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #f0f0f0;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #333;" id="searchSectionTitle">👨‍🏫 老师与课程</h3>
+
+                <!-- 统一搜索框 -->
+                <div class="form-group" style="position: relative;">
+                    <label class="form-label">搜索老师、课程或现场教学 <span class="required">*</span></label>
+                    <input type="text" id="unifiedSearch" class="form-input"
+                           placeholder="输入老师姓名、课程名称或现场教学点名称..."
+                           autocomplete="off">
+                    <div id="unifiedResults" class="search-dropdown"></div>
+                </div>
+
+                <!-- 动态第二选择框 -->
+                <div class="form-group" id="secondSelectGroup" style="display: none; margin-top: 12px;">
+                    <label class="form-label" id="secondLabel"></label>
+                    <select id="secondSelect" class="form-select" onchange="onSecondSelectChange()">
+                        <option value="">请选择</option>
+                    </select>
+                </div>
+
+                <!-- 已选摘要 -->
+                <div id="selectionSummary" class="selection-summary" style="display: none;">
+                    <span id="summaryText"></span>
+                    <button type="button" class="clear-btn" onclick="clearSelection()">✕ 重新选择</button>
+                </div>
+            </div>
+
+            <!-- 课程状态（固定为待上课，根据时间自动变化） -->
+
+            <!-- 操作按钮：保存安排 -->
+            <div class="form-actions" style="margin-top: 32px;">
+                <button type="submit" class="btn btn-primary">💾 保存安排</button>
+                <a href="{% if preselected_class_id %}/classes/{{ preselected_class_id }}{% else %}/schedules{% endif %}" class="btn btn-default">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 添加课程模态框 -->
+<div id="addCourseModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>➕ 为「<span id="modalTeacherName"></span>」添加课程</h3>
+            <button type="button" class="modal-close" onclick="closeAddCourseModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">课程名称</label>
+                <input type="text" id="newCourseName" class="form-input" placeholder="请输入课程名称..." maxlength="100">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" onclick="closeAddCourseModal()">取消</button>
+            <button type="button" class="btn btn-primary" onclick="submitAddCourse()">保存</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-section { margin-bottom: 24px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px 24px; }
+.form-group { display: flex; flex-direction: column; }
+.form-label { font-size: 14px; color: #333; margin-bottom: 8px; font-weight: 500; }
+.required { color: #ff4d4f; }
+.form-input, .form-select {
+    padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px;
+    font-size: 14px; transition: all 0.3s;
+}
+.form-input:focus, .form-select:focus {
+    border-color: #1890ff; outline: none;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 搜索下拉 */
+.search-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: #fff; border: 1px solid #d9d9d9; border-top: none;
+    border-radius: 0 0 4px 4px; max-height: 280px; overflow-y: auto;
+    z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.search-group-title {
+    padding: 6px 14px; font-size: 11px; color: #999;
+    background: #f5f5f5; border-bottom: 1px solid #f0f0f0;
+    text-transform: uppercase; letter-spacing: 1px;
+}
+.search-item {
+    padding: 10px 14px; cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.search-item:last-child { border-bottom: none; }
+.search-item:hover { background: #f0f7ff; }
+.search-item .item-name { font-size: 14px; color: #333; flex: 1; }
+.search-item .item-tag {
+    font-size: 11px; padding: 2px 8px; border-radius: 3px; white-space: nowrap;
+}
+.tag-teacher { background: #e6f7ff; color: #1890ff; }
+.tag-course  { background: #f6ffed; color: #52c41a; }
+.tag-site    { background: #fff7e6; color: #fa8c16; }
+.search-empty { padding: 16px; text-align: center; color: #999; font-size: 13px; }
+
+/* 自动状态标签 */
+.status-badge {
+    display: inline-block; padding: 6px 14px;
+    border-radius: 4px; font-size: 13px; font-weight: 500;
+    width: fit-content;
+}
+.status-pending   { background: #fff7e6; color: #fa8c16; }
+.status-active    { background: #f6ffed; color: #52c41a; animation: pulse 2s infinite; }
+.status-finished  { background: #f5f5f5; color: #999; }
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(82, 196, 26, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(82, 196, 26, 0); }
+}
+
+/* 已选摘要 */
+.selection-summary {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px; padding: 10px 14px;
+    background: #f6ffed; border: 1px solid #b7eb8f;
+    border-radius: 4px; font-size: 14px; color: #333;
+}
+.clear-btn {
+    background: none; border: none; color: #ff4d4f;
+    font-size: 12px; cursor: pointer; padding: 2px 6px;
+}
+.clear-btn:hover { background: #fff1f0; border-radius: 4px; }
+
+/* 模态框 */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45); z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-box {
+    background: #fff; border-radius: 8px; width: 420px; max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15); overflow: hidden;
+}
+.modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; border-bottom: 1px solid #f0f0f0;
+}
+.modal-header h3 { font-size: 16px; font-weight: 600; margin: 0; color: #333; }
+.modal-close {
+    background: none; border: none; font-size: 22px; color: #999;
+    cursor: pointer; line-height: 1; padding: 0 4px;
+}
+.modal-close:hover { color: #333; }
+.modal-body { padding: 20px; }
+.modal-footer {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding: 12px 20px 16px; border-top: 1px solid #f0f0f0;
+}
+
+.form-actions {
+    display: flex; gap: 12px; justify-content: center;
+    padding-top: 24px; border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 768px) {
+    .form-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<script>
+// ===== 数据准备 =====
+const teacherData = [];
+{% for t in teachers %}
+teacherData.push({
+    id: {{ t.id }},
+    name: "{{ t.name }}",
+    type: 'teacher',
+    courses: [
+        {% for record in t.teaching_records | default([]) %}
+        "{{ record.get('课程名称', '') | replace('"', '\\"') }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+});
+{% endfor %}
+
+// 现场教学点
+const siteData = [];
+{% for s in sites %}
+siteData.push({
+    id: 'site_{{ s.id }}',
+    name: "{{ s.name }}",
+    type: 'site'
+});
+{% endfor %}
+
+// 从所有老师上课记录中汇总课程，并建立课程→老师映射
+const courseSet = new Set();
+const courseToTeachers = {};
+teacherData.forEach(t => {
+    (t.courses || []).forEach(cname => {
+        if (!cname) return;
+        courseSet.add(cname);
+        if (!courseToTeachers[cname]) courseToTeachers[cname] = [];
+        if (!courseToTeachers[cname].find(x => x.id === t.id)) {
+            courseToTeachers[cname].push(t);
+        }
+    });
+});
+
+// 构建 courseData
+const courseData = Array.from(courseSet).map((cname, idx) => ({
+    id: idx + 1,
+    name: cname,
+    type: 'course',
+    teacherIds: (courseToTeachers[cname] || []).map(t => t.id)
+}));
+
+// ===== 状态 =====
+let primarySelection = null;  // {type, id, name}
+let secondarySelection = null; // {type, id, name}
+
+// ===== DOM =====
+const unifiedSearch   = document.getElementById('unifiedSearch');
+const unifiedResults  = document.getElementById('unifiedResults');
+const secondSelectGroup = document.getElementById('secondSelectGroup');
+const secondLabel     = document.getElementById('secondLabel');
+const secondSelect    = document.getElementById('secondSelect');
+const selectionSummary = document.getElementById('selectionSummary');
+const summaryText     = document.getElementById('summaryText');
+const teacherIdInput  = document.getElementById('teacherIdInput');
+const subjectInput    = document.getElementById('subjectInput');
+
+// ===== 搜索 =====
+unifiedSearch.addEventListener('input', function() {
+    const kw = this.value.trim().toLowerCase();
+    if (!kw) { unifiedResults.style.display = 'none'; return; }
+
+    const tMatches = teacherData.filter(t => t.name.toLowerCase().includes(kw));
+    const cMatches = courseData.filter(c => c.name.toLowerCase().includes(kw));
+    const sMatches = siteData.filter(s => s.name.toLowerCase().includes(kw));
+
+    renderUnifiedResults(tMatches, cMatches, sMatches);
+});
+
+unifiedSearch.addEventListener('focus', function() {
+    if (this.value.trim()) unifiedSearch.dispatchEvent(new Event('input'));
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#unifiedSearch') && !e.target.closest('#unifiedResults')) {
+        unifiedResults.style.display = 'none';
+    }
+});
+
+function renderUnifiedResults(t, c, s) {
+    let html = '';
+    if (t.length + c.length + s.length === 0) {
+        html = '<div class="search-empty">未找到匹配结果</div>';
+    } else {
+        if (t.length) {
+            html += '<div class="search-group-title">👨‍🏫 老师</div>';
+            html += t.map(x => `
+                <div class="search-item" onclick="selectPrimary('teacher', ${x.id})">
+                    <span class="item-name">${x.name}</span>
+                    <span class="item-tag tag-teacher">老师</span>
+                </div>
+            `).join('');
+        }
+        if (c.length) {
+            html += '<div class="search-group-title">📚 课程</div>';
+            html += c.map(x => `
+                <div class="search-item" onclick="selectPrimary('course', ${x.id})">
+                    <span class="item-name">${x.name}</span>
+                    <span class="item-tag tag-course">课程</span>
+                </div>
+            `).join('');
+        }
+        if (s.length) {
+            html += '<div class="search-group-title">📍 现场教学</div>';
+            html += s.map(x => `
+                <div class="search-item" onclick="selectPrimary('site', '${x.id}')">
+                    <span class="item-name">${x.name}</span>
+                    <span class="item-tag tag-site">现场教学</span>
+                </div>
+            `).join('');
+        }
+    }
+    unifiedResults.innerHTML = html;
+    unifiedResults.style.display = 'block';
+}
+
+// ===== 选择主项 =====
+function selectPrimary(type, id) {
+    unifiedResults.style.display = 'none';
+    secondarySelection = null;
+
+    if (type === 'teacher') {
+        const t = teacherData.find(x => x.id === id);
+        if (!t) return;
+        primarySelection = {type:'teacher', id:t.id, name:t.name};
+        unifiedSearch.value = t.name;
+
+        // 第二下拉：该老师的课程
+        const tcourses = t.courses || [];
+        secondLabel.textContent = `选择「${t.name}」的课程：`;
+        secondSelect.innerHTML = '<option value="">请选择课程</option>' +
+            tcourses.map((c, i) => {
+                const cname = (typeof c === 'object') ? c.name : c;
+                return `<option value="${cname}">${cname}</option>`;
+            }).join('') +
+            '<option value="__ADD_COURSE__" style="color:#1890ff;font-weight:500;">➕ 添加课程</option>';
+        secondSelectGroup.style.display = 'flex';
+        secondSelectGroup.style.flexDirection = 'column';
+        if (tcourses.length === 0) {
+            // 无预定义课程， teacher_id已确定，subject等用户选或自由输入
+            teacherIdInput.value = t.id;
+        }
+
+    } else if (type === 'course') {
+        const c = courseData.find(x => x.id === id);
+        if (!c) return;
+        primarySelection = {type:'course', id:c.id, name:c.name};
+        unifiedSearch.value = c.name;
+
+        // 第二下拉：能上这课的老师
+        const teachersForCourse = [];
+        (c.teacherIds || []).forEach(tid => {
+            const t = teacherData.find(x => x.id === tid);
+            if (t && !teachersForCourse.find(x => x.id === t.id)) teachersForCourse.push(t);
+        });
+
+        if (teachersForCourse.length === 0) {
+            secondSelectGroup.style.display = 'none';
+            teacherIdInput.value = '';
+            subjectInput.value = c.name;
+            updateSummary();
+            return;
+        }
+
+        secondLabel.textContent = `选择「${c.name}」的授课老师：`;
+        secondSelect.innerHTML = '<option value="">请选择老师</option>' +
+            teachersForCourse.map(t => `<option value="teacher_${t.id}">${t.name}</option>`).join('');
+        secondSelectGroup.style.display = 'flex';
+        secondSelectGroup.style.flexDirection = 'column';
+        // 课程作为主选，subject已确定
+        subjectInput.value = c.name;
+
+    } else if (type === 'site') {
+        const s = siteData.find(x => x.id === id);
+        if (!s) return;
+        primarySelection = {type:'site', id:s.id, name:s.name};
+        unifiedSearch.value = s.name;
+        secondSelectGroup.style.display = 'none';
+        teacherIdInput.value = '';  // 现场教学不需要老师
+        subjectInput.value = s.name;
+        // 自动设置地点为现场教学点
+        if (locationSearch) {
+            locationSearch.value = s.name;
+        }
+        if (locationValue) {
+            locationValue.value = s.name;
+        }
+        // 更新标题为现场教学
+        document.getElementById('searchSectionTitle').textContent = '📍 现场教学';
+        updateSummary();
+    }
+}
+
+// ===== 第二选择变化 =====
+function onSecondSelectChange() {
+    const val = secondSelect.value;
+    if (!val) { secondarySelection = null; updateSummary(); return; }
+
+    // 添加课程
+    if (val === '__ADD_COURSE__') {
+        openAddCourseModal();
+        secondSelect.value = ''; // 复位
+        return;
+    }
+
+    if (primarySelection.type === 'teacher') {
+        // 选了老师的课程
+        secondarySelection = {type:'course', name:val};
+        subjectInput.value = val;
+        teacherIdInput.value = primarySelection.id;
+    } else if (primarySelection.type === 'course') {
+        // 选了课程的老师
+        const tid = parseInt(val.replace('teacher_', ''));
+        const t = teacherData.find(x => x.id === tid);
+        if (t) {
+            secondarySelection = {type:'teacher', id:t.id, name:t.name};
+            teacherIdInput.value = t.id;
+        }
+    }
+    updateSummary();
+}
+
+// ===== 摘要更新 =====
+function updateSummary() {
+    if (!primarySelection) {
+        selectionSummary.style.display = 'none';
+        return;
+    }
+    let text = '';
+    if (primarySelection.type === 'teacher') {
+        text = `老师：${primarySelection.name}`;
+        if (secondarySelection && secondarySelection.type === 'course') {
+            text += `　→　课程：${secondarySelection.name}`;
+        } else {
+            text += `　（课程可自由输入）`;
+        }
+    } else if (primarySelection.type === 'course') {
+        text = `课程：${primarySelection.name}`;
+        if (secondarySelection && secondarySelection.type === 'teacher') {
+            text += `　→　老师：${secondarySelection.name}`;
+        } else {
+            text += `　（老师可自由安排）`;
+        }
+    } else if (primarySelection.type === 'site') {
+        text = `现场教学：${primarySelection.name}`;
+    }
+    summaryText.textContent = text;
+    selectionSummary.style.display = 'flex';
+}
+
+// ===== 清除 =====
+function clearSelection() {
+    primarySelection = null;
+    secondarySelection = null;
+    unifiedSearch.value = '';
+    secondSelectGroup.style.display = 'none';
+    secondSelect.innerHTML = '<option value="">请选择</option>';
+    selectionSummary.style.display = 'none';
+    teacherIdInput.value = '';
+    subjectInput.value = '';
+    document.getElementById('searchSectionTitle').textContent = '👨‍🏫 老师与课程';
+}
+
+// ===== 添加课程模态框 =====
+function openAddCourseModal() {
+    if (!primarySelection || primarySelection.type !== 'teacher') return;
+    document.getElementById('modalTeacherName').textContent = primarySelection.name;
+    document.getElementById('newCourseName').value = '';
+    document.getElementById('addCourseModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('newCourseName').focus(), 50);
+}
+
+function closeAddCourseModal() {
+    document.getElementById('addCourseModal').style.display = 'none';
+    secondSelect.value = '';
+}
+
+async function submitAddCourse() {
+    const courseName = document.getElementById('newCourseName').value.trim();
+    if (!courseName) {
+        alert('请输入课程名称');
+        return;
+    }
+    if (!primarySelection || primarySelection.type !== 'teacher') return;
+
+    const teacherId = primarySelection.id;
+    const teacher = teacherData.find(x => x.id === teacherId);
+
+    // 检查是否已存在
+    const exists = (teacher.courses || []).some(c => {
+        const cname = (typeof c === 'object') ? c.name : c;
+        return cname === courseName;
+    });
+    if (exists) {
+        alert('该课程已存在于该老师的课程列表中');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/teachers/' + teacherId + '/add-course', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({course_name: courseName})
+        });
+        const result = await resp.json();
+        if (result.success) {
+            // 本地更新
+            if (!teacher.courses) teacher.courses = [];
+            teacher.courses.push(courseName);
+
+            // 同步更新全局courseData / courseToTeachers
+            if (!courseToTeachers[courseName]) {
+                courseToTeachers[courseName] = [];
+            }
+            if (!courseToTeachers[courseName].find(x => x.id === teacher.id)) {
+                courseToTeachers[courseName].push(teacher);
+            }
+            const existingCourse = courseData.find(c => c.name === courseName);
+            if (existingCourse) {
+                if (!existingCourse.teacherIds.includes(teacher.id)) {
+                    existingCourse.teacherIds.push(teacher.id);
+                }
+            } else {
+                courseData.push({
+                    id: courseData.length + 1,
+                    name: courseName,
+                    type: 'course',
+                    teacherIds: [teacher.id]
+                });
+            }
+
+            // 刷新下拉
+            secondSelect.innerHTML = '<option value="">请选择课程</option>' +
+                teacher.courses.map(c => {
+                    const cname = (typeof c === 'object') ? c.name : c;
+                    return `<option value="${cname}" selected>${cname}</option>`;
+                }).join('') +
+                '<option value="__ADD_COURSE__" style="color:#1890ff;font-weight:500;">➕ 添加课程</option>';
+            secondSelect.value = courseName;
+            secondarySelection = {type:'course', name: courseName};
+            subjectInput.value = courseName;
+            teacherIdInput.value = teacherId;
+            updateSummary();
+            closeAddCourseModal();
+        } else {
+            alert(result.message || '添加失败');
+        }
+    } catch (e) {
+        alert('网络错误，请重试');
+    }
+}
+
+// 回车提交
+document.getElementById('newCourseName').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitAddCourse(); }
+    if (e.key === 'Escape') { closeAddCourseModal(); }
+});
+
+// 点击遮罩关闭
+window.addEventListener('click', function(e) {
+    if (e.target.id === 'addCourseModal') closeAddCourseModal();
+});
+
+// ===== 表单验证 =====
+document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+    const subjectVal = subjectInput.value.trim();
+    if (!subjectVal) {
+        e.preventDefault();
+        alert('请通过搜索框选择老师、课程或现场教学');
+        unifiedSearch.focus();
+        return false;
+    }
+    // 现场教学不需要老师 —— 确保 teacher_id 提交为空
+    if (primarySelection && primarySelection.type === 'site') {
+        teacherIdInput.value = '';
+        return true;
+    }
+    // 选了老师但没选课程，也允许提交（课程可自由输入）
+    if (primarySelection && primarySelection.type === 'teacher' && !secondarySelection) {
+        return true;
+    }
+    return true;
+});
+
+// ===== 编辑模式初始化 =====
+{% if schedule %}
+{% if schedule.teacher_id %}
+// 编辑模式：有老师ID，初始化为主选老师
+(function() {
+    const t = teacherData.find(x => x.id === {{ schedule.teacher_id }});
+    if (t) {
+        primarySelection = {type:'teacher', id:t.id, name:t.name};
+        unifiedSearch.value = t.name;
+        teacherIdInput.value = t.id;
+        subjectInput.value = "{{ schedule.subject or '' }}";
+        const tcourses = t.courses || [];
+        if (tcourses.length > 0) {
+            secondLabel.textContent = `选择「${t.name}」的课程：`;
+            secondSelect.innerHTML = '<option value="">请选择课程</option>' +
+                tcourses.map((c, i) => {
+                    const cname = (typeof c === 'object') ? c.name : c;
+                    const selected = (cname === "{{ schedule.subject or '' }}") ? 'selected' : '';
+                    return `<option value="${cname}" ${selected}>${cname}</option>`;
+                }).join('');
+            secondSelectGroup.style.display = 'flex';
+            secondSelectGroup.style.flexDirection = 'column';
+            if ("{{ schedule.subject or '' }}") {
+                secondarySelection = {type:'course', name:"{{ schedule.subject or '' }}"};
+            }
+        }
+        updateSummary();
+    }
+})();
+{% elif schedule.subject %}
+// 编辑模式：无老师但有课程/现场教学
+(function() {
+    const subj = "{{ schedule.subject }}";
+    // 尝试匹配现场教学
+    const s = siteData.find(x => x.name === subj);
+    if (s) {
+        primarySelection = {type:'site', id:s.id, name:s.name};
+        unifiedSearch.value = s.name;
+        subjectInput.value = s.name;
+        updateSummary();
+    } else {
+        // 尝试匹配课程
+        const c = courseData.find(x => x.name === subj);
+        if (c) {
+            primarySelection = {type:'course', id:c.id, name:c.name};
+            unifiedSearch.value = c.name;
+            subjectInput.value = c.name;
+            const teachersForCourse = courseToTeachers[c.name] || [];
+            if (teachersForCourse.length > 0 && {{ schedule.teacher_id or 'null' }}) {
+                secondLabel.textContent = `选择「${c.name}」的授课老师：`;
+                secondSelect.innerHTML = '<option value="">请选择老师</option>' +
+                    teachersForCourse.map(t => {
+                        const selected = (t.id === {{ schedule.teacher_id or 'null' }}) ? 'selected' : '';
+                        return `<option value="teacher_${t.id}" ${selected}>${t.name}</option>`;
+                    }).join('');
+                secondSelectGroup.style.display = 'flex';
+                secondSelectGroup.style.flexDirection = 'column';
+            }
+            updateSummary();
+        } else {
+            // 纯自由输入
+            unifiedSearch.value = subj;
+            subjectInput.value = subj;
+        }
+    }
+})();
+{% endif %}
+{% endif %}
+
+// ===== 自动状态计算 =====
+const slotTimes = {
+    morning:   { start: '08:30', end: '12:00' },
+    afternoon: { start: '14:00', end: '17:30' },
+    fullday:   { start: '08:30', end: '17:30' },
+    evening:   { start: '18:30', end: '21:00' }
+};
+
+function updateAutoStatus() {
+    const dateVal = document.getElementById('teachingDateInput').value;
+    const slotVal = document.getElementById('timeSlotSelect').value;
+    const badge = document.getElementById('autoStatusBadge');
+    const hiddenStatus = document.querySelector('input[name="status"]');
+
+    if (!dateVal || !slotVal || !badge) return;
+
+    const now = new Date();
+    const teachingDate = new Date(dateVal + 'T00:00:00');
+    const cfg = slotTimes[slotVal];
+    const startTime = new Date(dateVal + 'T' + cfg.start + ':00');
+    const endTime   = new Date(dateVal + 'T' + cfg.end   + ':00');
+
+    let statusText = '待上课';
+    let statusClass = 'status-pending';
+
+    if (now >= startTime && now <= endTime) {
+        statusText = '正在进行';
+        statusClass = 'status-active';
+    } else if (now > endTime) {
+        statusText = '已结课';
+        statusClass = 'status-finished';
+    }
+
+    badge.textContent = statusText;
+    badge.className = 'status-badge ' + statusClass;
+    if (hiddenStatus) hiddenStatus.value = statusText;
+}
+
+document.getElementById('teachingDateInput').addEventListener('change', updateAutoStatus);
+document.getElementById('timeSlotSelect').addEventListener('change', updateAutoStatus);
+// ===== 新增教室模态框 =====
+function openAddClassroomModal() {
+    // 创建模态框
+    let modal = document.getElementById('addClassroomModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'addClassroomModal';
+        modal.innerHTML = `
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;"
+                 onclick="if(event.target===this) closeAddClassroomModal()">
+                <div style="background: #fff; border-radius: 8px; padding: 24px; width: 400px; max-width: 90%;">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px;">➕ 新增教室</h3>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 14px;">教室名称 *</label>
+                        <input type="text" id="newClassroomName" class="form-input" style="width: 100%;" placeholder="如：A101多媒体教室" required>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 14px;">容纳人数</label>
+                        <input type="number" id="newClassroomCapacity" class="form-input" style="width: 100%;" placeholder="如：50" value="50">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 14px;">校区</label>
+                        <select id="newClassroomCampus" class="form-input" style="width: 100%;">
+                            <option value="主校区">主校区</option>
+                            <option value="分校区">分校区</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" onclick="closeAddClassroomModal()" style="padding: 8px 16px; border: 1px solid #d9d9d9; background: #fff; border-radius: 4px; cursor: pointer;">取消</button>
+                        <button type="button" onclick="submitNewClassroom()" style="padding: 8px 16px; background: #1890ff; color: #fff; border: none; border-radius: 4px; cursor: pointer;">保存</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'block';
+    document.getElementById('newClassroomName').value = locationSearch.value || '';
+}
+
+function closeAddClassroomModal() {
+    const modal = document.getElementById('addClassroomModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function submitNewClassroom() {
+    const name = document.getElementById('newClassroomName').value.trim();
+    const capacity = document.getElementById('newClassroomCapacity').value || 50;
+    const campus = document.getElementById('newClassroomCampus').value;
+    
+    if (!name) {
+        alert('请输入教室名称');
+        return;
+    }
+    
+    fetch('/api/classrooms', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name, capacity: parseInt(capacity), campus: campus, type: '多媒体教室'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // 添加到本地数据
+            allLocations.push({name: data.classroom.name, type: '教室'});
+            // 自动选中
+            selectLocation(data.classroom.name);
+            closeAddClassroomModal();
+            alert('✅ 教室添加成功：' + data.classroom.name);
+        } else {
+            alert('❌ 添加失败：' + (data.error || '未知错误'));
+        }
+    })
+    .catch(e => {
+        alert('❌ 网络错误：' + e.message);
+    });
+}
+
+// ===== 新增现场教学点模态框 =====
+function openAddSiteModal() {
+    let modal = document.getElementById('addSiteModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'addSiteModal';
+        modal.innerHTML = `
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;"
+                 onclick="if(event.target===this) closeAddSiteModal()">
+                <div style="background: #fff; border-radius: 8px; padding: 24px; width: 400px; max-width: 90%;">
+                    <h3 style="margin: 0 0 16px 0; font-size: 18px;">➕ 新增现场教学点</h3>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 14px;">教学点名称 *</label>
+                        <input type="text" id="newSiteName" class="form-input" style="width: 100%;" placeholder="如：南湖革命纪念馆" required>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 14px;">地址</label>
+                        <input type="text" id="newSiteAddress" class="form-input" style="width: 100%;" placeholder="请输入地址">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 4px; font-size: 14px;">简介</label>
+                        <textarea id="newSiteIntro" class="form-input" style="width: 100%; min-height: 60px; resize: vertical;" placeholder="请输入简介"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" onclick="closeAddSiteModal()" style="padding: 8px 16px; border: 1px solid #d9d9d9; background: #fff; border-radius: 4px; cursor: pointer;">取消</button>
+                        <button type="button" onclick="submitNewSite()" style="padding: 8px 16px; background: #52c41a; color: #fff; border: none; border-radius: 4px; cursor: pointer;">保存</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'block';
+    document.getElementById('newSiteName').value = locationSearch.value || '';
+}
+
+function closeAddSiteModal() {
+    const modal = document.getElementById('addSiteModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function submitNewSite() {
+    const name = document.getElementById('newSiteName').value.trim();
+    const address = document.getElementById('newSiteAddress').value.trim();
+    const intro = document.getElementById('newSiteIntro').value.trim();
+    
+    if (!name) {
+        alert('请输入教学点名称');
+        return;
+    }
+    
+    fetch('/api/teaching-sites', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name, address: address, introduction: intro})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            allLocations.push({name: data.site.name, type: '现场教学'});
+            selectLocation(data.site.name);
+            closeAddSiteModal();
+            alert('✅ 现场教学点添加成功：' + data.site.name);
+        } else {
+            alert('❌ 添加失败：' + (data.error || '未知错误'));
+        }
+    })
+    .catch(e => {
+        alert('❌ 网络错误：' + e.message);
+    });
+}
+
+
+// ===== 教室/地点搜索 =====
+const locationSearch = document.getElementById('locationSearch');
+const locationResults = document.getElementById('locationResults');
+const locationValue = document.getElementById('locationValue');
+
+// 所有地点数据（教室 + 现场教学点）
+const allLocations = [
+    {% for room in classrooms %}
+    { name: '{{ room.name }}', type: '教室' },
+    {% endfor %}
+    {% for site in sites %}
+    { name: '{{ site.name }}', type: '现场教学' },
+    {% endfor %}
+];
+
+function filterLocations(keyword) {
+    if (!keyword) return [];
+    const kw = keyword.toLowerCase();
+    return allLocations.filter(loc => loc.name.toLowerCase().includes(kw));
+}
+
+function renderLocationResults(results) {
+    if (results.length === 0) {
+        locationResults.innerHTML = `
+            <div style="padding: 12px; color: #999; font-size: 14px; text-align: center;">
+                <div style="margin-bottom: 8px;">没有找到匹配的地点</div>
+                <button type="button" onclick="openAddClassroomModal()" style="padding: 6px 12px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; margin-right: 8px;">➕ 新增教室</button>
+                <button type="button" onclick="openAddSiteModal()" style="padding: 6px 12px; background: #52c41a; color: #fff; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">➕ 新增现场教学点</button>
+            </div>`;
+        locationResults.style.display = 'block';
+        return;
+    }
+    
+    let html = '';
+    results.forEach(loc => {
+        const typeLabel = loc.type === '现场教学' 
+            ? '<span style="color: #fa8c16; font-size: 12px; margin-left: 8px;">📍 现场教学</span>' 
+            : '<span style="color: #1890ff; font-size: 12px; margin-left: 8px;">🏫 教室</span>';
+        html += `<div class="location-item" data-name="${loc.name}" style="padding: 10px 12px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"
+                     onmouseover="this.style.background='#f5f5f5'" 
+                     onmouseout="this.style.background='none'"
+                     onclick="selectLocation('${loc.name}')">
+            <span style="font-weight: 500;">${loc.name}</span>${typeLabel}
+        </div>`;
+    });
+    locationResults.innerHTML = html;
+    locationResults.style.display = 'block';
+}
+
+function selectLocation(name) {
+    locationSearch.value = name;
+    locationValue.value = name;
+    locationResults.style.display = 'none';
+    
+    // 如果是现场教学，同步更新统一搜索区域
+    const loc = allLocations.find(l => l.name === name);
+    if (loc && loc.type === '现场教学') {
+        // 触发现场教学选择逻辑
+        const site = siteData.find(s => s.name === name);
+        if (site) {
+            onUnifiedSelect('site', site.id);
+        }
+    }
+}
+
+// 输入事件
+locationSearch.addEventListener('input', function() {
+    const keyword = this.value.trim();
+    if (keyword.length === 0) {
+        locationResults.style.display = 'none';
+        locationValue.value = '';
+        return;
+    }
+    const results = filterLocations(keyword);
+    renderLocationResults(results);
+});
+
+// 失去焦点时隐藏（延迟以允许点击）
+locationSearch.addEventListener('blur', function() {
+    setTimeout(() => { locationResults.style.display = 'none'; }, 200);
+});
+
+// 获得焦点时如果已有内容，重新显示结果
+locationSearch.addEventListener('focus', function() {
+    const keyword = this.value.trim();
+    if (keyword.length > 0) {
+        const results = filterLocations(keyword);
+        renderLocationResults(results);
+    }
+});
+
+// 样式
+const locationStyle = document.createElement('style');
+locationStyle.textContent = `
+    #locationResults {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        margin-top: 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    #locationResults .location-item:hover {
+        background: #f5f5f5 !important;
+    }
+    #locationResults .location-item:last-child {
+        border-bottom: none;
+    }
+`;
+document.head.appendChild(locationStyle);
+
+
+// 初始化状态
+updateAutoStatus();
+</script>
+{% endblock %}

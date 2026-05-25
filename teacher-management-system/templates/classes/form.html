@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if class_obj %}编辑班级{% else %}新增班级{% endif %} - 系统管理中心{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">{% if class_obj %}✏️ 编辑班级{% else %}➕ 新增班级{% endif %}</span>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% if class_obj %}/classes/{{ class_obj.id }}/edit{% else %}/classes/new{% endif %}">
+            <!-- 隐藏字段：操作类型 -->
+            <input type="hidden" name="form_action" id="formAction" value="">
+            
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="form-group form-group-full">
+                        <label class="form-label">班级名称 <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-input" value="{{ class_obj.name if class_obj else '' }}" placeholder="如：企业领导力提升研修班" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">班级分类 <span class="required">*</span></label>
+                        <select name="category_id" class="form-select" required>
+                            <option value="">请选择</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if class_obj and class_obj.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">班级状态</label>
+                        {% if class_obj %}
+                        <!-- 编辑模式：状态只读，由系统自动流转 -->
+                        <div class="form-input" style="background: #f5f5f5; cursor: not-allowed; display: flex; align-items: center;">
+                            {% set class_status = class_obj.status or '待开班' %}
+                            {% set end_date_val = to_date(class_obj.end_date) if class_obj.end_date else None %}
+                            {% if end_date_val and end_date_val < now.date() %}
+                                {% set class_status = '已结课' %}
+                            {% endif %}
+                            <span class="status-badge" style="
+                                padding: 2px 10px;
+                                border-radius: 4px;
+                                font-size: 12px;
+                                {% if class_status == '待开班' %}
+                                background: #fff7e6; color: #faad14; border: 1px solid #ffd591;
+                                {% elif class_status == '进行中' %}
+                                background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f;
+                                {% elif class_status == '已结课' %}
+                                background: #f5f5f5; color: #999; border: 1px solid #d9d9d9;
+                                {% else %}
+                                background: #f5f5f5; color: #999; border: 1px solid #d9d9d9;
+                                {% endif %}
+                            ">
+                                {{ class_status }}
+                            </span>
+                            <span style="margin-left: 8px; font-size: 12px; color: #999;">（由系统自动流转）</span>
+                        </div>
+                        {% else %}
+                        <!-- 新增模式：固定为待开班 -->
+                        <input type="hidden" name="status" value="待开班">
+                        <div class="form-input" style="background: #f5f5f5; cursor: not-allowed; display: flex; align-items: center;">
+                            <span class="status-badge" style="padding: 2px 10px; border-radius: 4px; font-size: 12px; background: #fff7e6; color: #faad14; border: 1px solid #ffd591;">
+                                待开班
+                            </span>
+                            <span style="margin-left: 8px; font-size: 12px; color: #999;">新建班级默认为此状态</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">开始日期 <span class="required">*</span></label>
+                        <input type="date" name="start_date" id="start_date" class="form-input" 
+                               value="{{ class_obj.start_date.strftime('%Y-%m-%d') if class_obj and class_obj.start_date else '' }}" 
+                               onchange="updateEndDateMin()" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">结束日期 <span class="required">*</span></label>
+                        <input type="date" name="end_date" id="end_date" class="form-input" 
+                               value="{{ class_obj.end_date.strftime('%Y-%m-%d') if class_obj and class_obj.end_date else '' }}" 
+                               min="{{ class_obj.start_date.strftime('%Y-%m-%d') if class_obj and class_obj.start_date else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">项目主任 <span class="required">*</span></label>
+                        {% if class_obj %}
+                        <input type="text" name="project_leader" class="form-input" value="{{ class_obj.project_leader or '' }}" placeholder="登录用户自动显示" required>
+                        {% else %}
+                        <input type="text" name="project_leader" class="form-input" value="{{ current_user_name or '' }}" placeholder="登录后自动填充" required>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">班主任 <span class="required">*</span></label>
+                        <input type="text" name="class_advisor" class="form-input" value="{{ class_obj.class_advisor if class_obj else '' }}" placeholder="请输入班主任姓名" required>
+                        <span style="font-size: 12px; color: #999; margin-top: 4px; display: block;">（后续将从权限系统自动获取可选班主任）</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if class_obj %}
+            <!-- 编辑模式：显示课表 -->
+            <div class="form-section" id="class-schedule-section">
+                <div class="section-title" style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #1890ff;">
+                    📋 班级课表
+                </div>
+                
+                {% set class_schedules = schedules | selectattr('class_id', 'equalto', class_obj.id) | list %}
+                {% if class_schedules %}
+                {% set site_names = sites | map(attribute='name') | list %}
+                {% set schedules_by_date = {} %}
+                {% for s in class_schedules %}
+                    {% set date_key = s.teaching_date.strftime('%Y-%m-%d') if s.teaching_date else '未安排' %}
+                    {% if date_key not in schedules_by_date %}
+                        {% set _ = schedules_by_date.__setitem__(date_key, {}) %}
+                    {% endif %}
+                    {% set _ = schedules_by_date[date_key].__setitem__(s.time_slot, s) %}
+                {% endfor %}
+                {% set date_range = schedules_by_date.keys() | sort %}
+                
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <thead>
+                            <tr style="background: #f5f5f5;">
+                                <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: left; min-width: 100px;">时段</th>
+                                {% for date_str in date_range %}
+                                {% set d = datetime.strptime(date_str, '%Y-%m-%d') %}
+                                {% set week_day = ['周一','周二','周三','周四','周五','周六','周日'][d.weekday()] %}
+                                {% set is_weekend = d.weekday() >= 5 %}
+                                <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; min-width: 140px; {% if is_weekend %}background: #fff7e6;{% endif %}">
+                                    <div style="font-weight: 600;">{{ date_str }}</div>
+                                    <div style="font-size: 11px; color: {% if is_weekend %}#fa8c16{% else %}#999{% endif %};">{{ week_day }}</div>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for slot_key, slot_info in [('morning', '☀️ 上午'), ('afternoon', '🌤 下午'), ('fullday', '📍 全天'), ('evening', '🌙 晚上')] %}
+                            {% set slot_time = {'morning': '08:30-12:00', 'afternoon': '14:00-17:30', 'fullday': '08:30-17:30', 'evening': '18:30-21:00'}[slot_key] %}
+                            <tr>
+                                <td style="padding: 12px; border: 1px solid #e8e8e8; vertical-align: top; background: #fafafa;">
+                                    <div style="font-weight: 600; color: #333;">{{ slot_info }}</div>
+                                    <div style="font-size: 11px; color: #999;">{{ slot_time }}</div>
+                                </td>
+                                
+                                {% for date_str in date_range %}
+                                {% set d = datetime.strptime(date_str, '%Y-%m-%d') %}
+                                {% set is_weekend = d.weekday() >= 5 %}
+                                {% set schedule = schedules_by_date[date_str].get(slot_key) %}
+                                
+                                <td style="padding: 12px; border: 1px solid #e8e8e8; vertical-align: top; {% if is_weekend %}background: #fff7e6;{% endif %}">
+                                    {% if schedule %}
+                                        {% if schedule.teacher_id %}
+                                        <div style="background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 6px; padding: 8px;">
+                                            <div style="font-weight: 500; color: #333; margin-bottom: 4px; font-size: 13px;">{{ schedule.subject or '未命名课程' }}</div>
+                                            <div style="font-size: 12px; color: #52c41a;">👨‍🏫 {{ schedule.teacher_name }}</div>
+                                            {% if schedule.location %}
+                                            <div style="font-size: 11px; color: #999; margin-top: 4px;">📍 {{ schedule.location }}</div>
+                                            {% endif %}
+                                        </div>
+                                        {% elif schedule.location and schedule.location in site_names %}
+                                        <div style="background: #fff7e6; border: 1px solid #ffd591; border-radius: 6px; padding: 8px;">
+                                            <div style="font-weight: 500; color: #333; margin-bottom: 4px; font-size: 13px;">{{ schedule.subject or '未命名课程' }}</div>
+                                            <div style="font-size: 12px; color: #fa8c16;">📍 现场教学</div>
+                                        </div>
+                                        {% else %}
+                                        <div style="background: #fff2f0; border: 1px solid #ffccc7; border-radius: 6px; padding: 8px;">
+                                            <div style="font-size: 12px; color: #ff4d4f; margin-bottom: 4px;">⏳ 待安排</div>
+                                            <a href="/schedules/{{ schedule.id }}/edit" class="btn btn-sm btn-primary" style="font-size: 11px;">安排</a>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div style="color: #d9d9d9; font-size: 12px; text-align: center; padding: 16px 0;">-</div>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div style="padding: 32px; text-align: center; color: #999;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">📅</div>
+                    <p>暂无课表</p>
+                    <a href="/classes/{{ class_obj.id }}/schedule" class="btn btn-primary" style="margin-top: 12px;">生成日程安排</a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 编辑模式：导入学员区域 -->
+            <div class="form-section" id="student-import-section">
+                <div class="section-title" style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #52c41a;">
+                    👥 学员管理
+                </div>
+                {% set class_students = students | selectattr('class_id', 'equalto', class_obj.id) | list %}
+                {% if class_students %}
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+                    {% for stu in class_students %}
+                    <span class="tag tag-blue">{{ stu.name }}</span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="padding: 16px; background: #fff7e6; border-radius: 6px; color: #fa8c16; font-size: 14px; margin-bottom: 16px;">
+                    ⚠️ 尚未导入学员，请先导入学员后再保存班级
+                </div>
+                {% endif %}
+                <a href="/classes/{{ class_obj.id }}/import-students" class="btn btn-secondary">
+                    ➕ 导入学员
+                </a>
+            </div>
+            {% endif %}
+            
+            <div class="form-actions">
+                {% if not class_obj %}
+                <!-- 新建模式 -->
+                <button type="button" onclick="onGenerateSchedule()" class="btn btn-secondary">
+                    📅 生成日程安排
+                </button>
+                <button type="button" onclick="onSaveClass()" class="btn btn-primary">
+                    💾 保存班级
+                </button>
+                {% else %}
+                <!-- 编辑模式 -->
+                <button type="button" onclick="onSaveClassEdit()" class="btn btn-primary">
+                    💾 保存班级
+                </button>
+                <button type="button" onclick="onSaveAndChecklist()" class="btn btn-success" style="background: #52c41a; color: #fff;">
+                    ✅ 保存并进入自查清单
+                </button>
+                {% endif %}
+                <a href="/classes" class="btn btn-default">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-section {
+    margin-bottom: 32px;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 24px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-group-full {
+    grid-column: span 2;
+}
+.form-label {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.required {
+    color: #ff4d4f;
+}
+.form-input,
+.form-select,
+.form-textarea {
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: #1890ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* 按钮 */
+.btn {
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+    border: none;
+}
+.btn-primary {
+    background: #1890ff;
+    color: #fff;
+}
+.btn-primary:hover {
+    background: #40a9ff;
+}
+.btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+    border: 1px solid #d9d9d9;
+}
+.btn-secondary:hover {
+    background: #e8e8e8;
+}
+.btn-default {
+    background: #fff;
+    color: #666;
+    border: 1px solid #d9d9d9;
+}
+.btn-default:hover {
+    color: #1890ff;
+    border-color: #1890ff;
+}
+.btn-sm {
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+}
+</style>
+
+<script>
+// 新建模式：生成日程安排
+function onGenerateSchedule() {
+    const form = document.querySelector('form');
+    
+    // 基本验证
+    const name = form.querySelector('[name="name"]').value;
+    const category = form.querySelector('[name="category_id"]').value;
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    if (!name || !category || !startDate || !endDate) {
+        alert('请填写完整的班级信息（名称、分类、开始日期、结束日期）');
+        return;
+    }
+    
+    if (startDate > endDate) {
+        alert('开始日期不能晚于结束日期');
+        return;
+    }
+    
+    // 设置操作类型并提交
+    document.getElementById('formAction').value = 'generate_schedule';
+    form.submit();
+}
+
+// 当开始日期变化时，更新结束日期的最小值
+function updateEndDateMin() {
+    const startDate = document.getElementById('start_date').value;
+    const endDateInput = document.getElementById('end_date');
+    
+    if (startDate) {
+        endDateInput.min = startDate;
+        // 如果当前结束日期早于新的开始日期，清空结束日期
+        if (endDateInput.value && endDateInput.value < startDate) {
+            endDateInput.value = '';
+        }
+    }
+}
+
+// 新建模式：保存班级
+function onSaveClass() {
+    alert('请先生成日程安排，完成课表设置后再保存班级');
+    // 自动触发生成日程安排
+    onGenerateSchedule();
+}
+
+// 编辑模式：保存班级并进入自查清单
+function onSaveAndChecklist() {
+    {% set class_schedules = schedules | selectattr('class_id', 'equalto', class_obj.id) | list %}
+    {% set class_students = students | selectattr('class_id', 'equalto', class_obj.id) | list %}
+    
+    {% if not class_schedules %}
+    alert('请先生成日程安排');
+    return;
+    {% endif %}
+    
+    {% if not class_students %}
+    if (!confirm('尚未导入学员，是否继续保存并进入自查清单？')) {
+        return;
+    }
+    {% endif %}
+    
+    document.getElementById('formAction').value = 'save_and_checklist';
+    document.querySelector('form').submit();
+}
+
+// 编辑模式：保存班级
+function onSaveClassEdit() {
+    {% set class_schedules = schedules | selectattr('class_id', 'equalto', class_obj.id) | list %}
+    {% set class_students = students | selectattr('class_id', 'equalto', class_obj.id) | list %}
+    
+    {% if not class_schedules %}
+    alert('请先生成日程安排');
+    return;
+    {% endif %}
+    
+    {% if not class_students %}
+    if (!confirm('尚未导入学员，是否继续保存？')) {
+        return;
+    }
+    {% endif %}
+    
+    document.getElementById('formAction').value = 'save_class';
+    document.querySelector('form').submit();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if site %}编辑现场教学点{% else %}新增现场教学点{% endif %} - 系统管理中心{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">{% if site %}✏️ 编辑现场教学点{% else %}➕ 新增现场教学点{% endif %}</span>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% if site %}/sites/{{ site.id }}/edit{% else %}/sites/new{% endif %}">
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">教学点名称 <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-input" value="{{ site.name if site else '' }}" placeholder="如：阿里巴巴集团总部" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">现场类型 <span class="required">*</span></label>
+                        <select name="type" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="企业参访" {% if site and site.type == '企业参访' %}selected{% endif %}>企业参访</option>
+                            <option value="红色教育" {% if site and site.type == '红色教育' %}selected{% endif %}>红色教育</option>
+                            <option value="美丽乡村" {% if site and site.type == '美丽乡村' %}selected{% endif %}>美丽乡村</option>
+                            <option value="科技创新" {% if site and site.type == '科技创新' %}selected{% endif %}>科技创新</option>
+                            <option value="政务考察" {% if site and site.type == '政务考察' %}selected{% endif %}>政务考察</option>
+                            <option value="文化考察" {% if site and site.type == '文化考察' %}selected{% endif %}>文化考察</option>
+                            <option value="其他" {% if site and site.type == '其他' %}selected{% endif %}>其他</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">供应商</label>
+                        <input type="text" name="supplier" class="form-input" value="{{ site.supplier if site else '' }}" placeholder="如：阿里培训部">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">联系人</label>
+                        <input type="text" name="contact_name" class="form-input" value="{{ site.contact_name if site else '' }}" placeholder="如：陈经理">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">联系电话</label>
+                        <input type="text" name="contact_phone" class="form-input" value="{{ site.contact_phone if site else '' }}" placeholder="如：13900139001">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">参考价格（元/人）</label>
+                        <input type="number" name="price" class="form-input" value="{{ site.price if site else '' }}" placeholder="0.00" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">审核状态</label>
+                        <select name="audit_status" class="form-select">
+                            <option value="已通过" {% if site and site.audit_status == '已通过' %}selected{% endif %}>已通过</option>
+                            <option value="待审核" {% if site and site.audit_status == '待审核' %}selected{% endif %}>待审核</option>
+                            <option value="已拒绝" {% if site and site.audit_status == '已拒绝' %}selected{% endif %}>已拒绝</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group form-group-full">
+                        <label class="form-label">具体地址</label>
+                        <input type="text" name="address" class="form-input" value="{{ site.address if site else '' }}" placeholder="如：杭州市余杭区文一西路969号">
+                    </div>
+                    
+                    <div class="form-group form-group-full">
+                        <label class="form-label">教学点简介</label>
+                        <textarea name="introduction" class="form-textarea" rows="6" placeholder="教学点背景、特色、参观内容等详细说明">{{ site.introduction if site else '' }}</textarea>
+                    </div>
+                    
+                    <div class="form-group form-group-full">
+                        <label class="form-label">教学点图片</label>
+                        <div class="image-upload">
+                            <input type="file" name="images" class="file-input" multiple accept="image/*">
+                            <p style="font-size: 12px; color: #999; margin-top: 4px;">支持上传多张图片，建议尺寸 800x600</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 保存</button>
+                <a href="/sites" class="btn btn-default">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-section {
+    margin-bottom: 32px;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 24px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-group-full {
+    grid-column: span 2;
+}
+.form-label {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.required {
+    color: #ff4d4f;
+}
+.form-input,
+.form-select,
+.form-textarea {
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: #1890ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+.image-upload {
+    padding: 16px;
+    border: 2px dashed #d9d9d9;
+    border-radius: 4px;
+    background: #fafafa;
+}
+.file-input {
+    width: 100%;
+}
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+}
+</style>
+{% endblock %}

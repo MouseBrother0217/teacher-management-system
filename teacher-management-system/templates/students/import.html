@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}导入学员 - {{ class_obj.name }}{% endblock %}
+
+{% block content %}
+<!-- 页面标题 -->
+<div style="background: #fff; padding: 16px 24px; margin-bottom: 16px; border-bottom: 1px solid #f0f0f0;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="font-size: 18px; font-weight: 500; margin: 0; color: #333;">📥 导入学员</h1>
+            <p style="font-size: 13px; color: #999; margin: 4px 0 0 0;">班级：{{ class_obj.name }} | 当前学员：{{ class_students|length }} 人</p>
+        </div>
+        <a href="/classes/{{ class_obj.id }}/edit" class="btn btn-default">← 返回班级编辑</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 24px;">
+    <!-- 左侧：批量粘贴导入 -->
+    <div style="background: #fff; padding: 20px; border-radius: 4px;">
+        <h3 style="font-size: 15px; font-weight: 500; margin: 0 0 16px 0; color: #333;">📝 批量粘贴导入</h3>
+        <p style="font-size: 13px; color: #666; margin: 0 0 12px 0;">
+            <strong>智能识别导入：</strong>粘贴学员信息，系统自动识别各字段。
+            <br>支持任意顺序、任意分隔符（逗号、空格、制表符等）。
+            <br>每行一个学员，或每行一个字段用空行分隔学员。
+            <br><span style="color: #999;">必填：姓名、性别、证件号码、手机号、单位、职务 | 选填：证件类型、省份</span>
+        </p>
+        <form method="post" action="/classes/{{ class_obj.id }}/import-students" onsubmit="return validateBatchForm()">
+            <textarea name="batch_data" id="batchData" placeholder="粘贴学员信息，系统自动识别各字段。支持任意顺序、任意分隔符。&#10;&#10;示例1（空格分隔）:&#10;张三 男 身份证 330102199001011234 13800138001 浙江大学 工程师 浙江省&#10;&#10;示例2（逗号分隔）:&#10;李四,女,护照,G12345678,13900139001,华为技术,产品经理,广东省&#10;&#10;示例3（制表符分隔）:&#10;王五\t男\t身份证\t330102199003031234\t13700137001\t阿里巴巴\t技术总监\t浙江省&#10;&#10;示例4（字段顺序打乱）:&#10;13800138002,李四,浙江省,女,330102199002022345,阿里巴巴,产品经理"
+                      style="width: 100%; height: 300px; padding: 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; font-family: monospace; resize: vertical;"></textarea>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button type="submit" style="padding: 8px 24px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">✅ 确认导入</button>
+                <button type="button" onclick="document.querySelector('textarea[name=batch_data]').value=''" style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">清空</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 右侧：Excel导入 + 从学员库选择 + 新增学员 -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Excel导入 -->
+        <div style="background: #fff; padding: 20px; border-radius: 4px;">
+            <h3 style="font-size: 15px; font-weight: 500; margin: 0 0 12px 0; color: #333;">📊 Excel表格导入</h3>
+            <p style="font-size: 13px; color: #666; margin: 0 0 12px 0;">
+                下载模板，填写学员信息后上传导入。
+                <br><span style="color: #999;">支持 .xlsx / .xls 格式</span>
+            </p>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <a href="/students/template" 
+                   style="display: inline-block; padding: 8px 20px; background: #f0f0f0; color: #333; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; text-decoration: none; cursor: pointer;"
+                   download>
+                    📥 下载导入模板
+                </a>
+            </div>
+            <form method="post" action="/classes/{{ class_obj.id }}/import-students" enctype="multipart/form-data" onsubmit="return validateExcelForm()">
+                <input type="file" name="excel_file" id="excelFile" accept=".xlsx,.xls"
+                       style="width: 100%; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; margin-bottom: 12px;">
+                <div style="display: flex; gap: 8px;">
+                    <button type="submit" style="padding: 8px 24px; background: #52c41a; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">📤 上传导入</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 新增学员入口 -->
+        <div style="background: #fff; padding: 20px; border-radius: 4px;">
+            <h3 style="font-size: 15px; font-weight: 500; margin: 0 0 12px 0; color: #333;">➕ 新增单个学员</h3>
+            <p style="font-size: 13px; color: #666; margin: 0 0 12px 0;">学员不在库中？手动添加新学员到本班级</p>
+            <a href="/students/new?class_id={{ class_obj.id }}&return_class_id={{ class_obj.id }}" 
+               style="display: inline-block; padding: 8px 24px; background: #52c41a; color: #fff; border: none; border-radius: 4px; font-size: 14px; text-decoration: none; cursor: pointer;">
+                新增学员
+            </a>
+        </div>
+        
+        <!-- 从学员库选择 -->
+        <div style="background: #fff; padding: 20px; border-radius: 4px; flex: 1;">
+            <h3 style="font-size: 15px; font-weight: 500; margin: 0 0 16px 0; color: #333;">📚 从学员库选择</h3>
+            <p style="font-size: 13px; color: #666; margin: 0 0 12px 0;">搜索并选择已有学员添加到本班级</p>
+            <input type="text" id="studentSearch" placeholder="搜索姓名、手机号..." 
+                   style="width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; margin-bottom: 12px;">
+            
+            <form method="post" action="/classes/{{ class_obj.id }}/import-students?mode=select">
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 4px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #fafafa;">
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;"><input type="checkbox" id="selectAll"></th>
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;">姓名</th>
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;">性别</th>
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;">证件类型</th>
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;">证件号码</th>
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;">手机号</th>
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;">单位</th>
+                                <th style="padding: 8px 12px; text-align: left; font-weight: 500; border-bottom: 1px solid #f0f0f0;">职务</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentList">
+                            {% for student in all_students %}
+                            {% if student.class_id != class_obj.id %}
+                            <tr class="student-row" style="border-bottom: 1px solid #f0f0f0;" data-name="{{ student.name }}" data-phone="{{ student.phone or '' }}" data-company="{{ student.company or '' }}">
+                                <td style="padding: 8px 12px;"><input type="checkbox" name="student_ids" value="{{ student.id }}"></td>
+                                <td style="padding: 8px 12px;">{{ student.name }}</td>
+                                <td style="padding: 8px 12px;">{{ student.gender or '-' }}</td>
+                                <td style="padding: 8px 12px;">{{ student.id_type or '身份证' }}</td>
+                                <td style="padding: 8px 12px;">{{ student.id_card or '-' }}</td>
+                                <td style="padding: 8px 12px;">{{ student.phone or '-' }}</td>
+                                <td style="padding: 8px 12px;">{{ student.company or '-' }}</td>
+                                <td style="padding: 8px 12px;">{{ student.job or '-' }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 12px;">
+                    <button type="submit" style="padding: 8px 24px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">➕ 添加到班级</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 全选/取消全选
+document.getElementById('selectAll').addEventListener('change', function() {
+    document.querySelectorAll('input[name="student_ids"]').forEach(cb => cb.checked = this.checked);
+});
+
+// 搜索筛选
+document.getElementById('studentSearch').addEventListener('input', function() {
+    const kw = this.value.toLowerCase();
+    document.querySelectorAll('.student-row').forEach(row => {
+        const name = row.dataset.name.toLowerCase();
+        const phone = row.dataset.phone.toLowerCase();
+        const company = row.dataset.company.toLowerCase();
+        row.style.display = (name.includes(kw) || phone.includes(kw) || company.includes(kw)) ? '' : 'none';
+    });
+});
+
+// 批量粘贴导入必填验证（智能识别模式：不再强制字段顺序和分隔符）
+function validateBatchForm() {
+    const data = document.getElementById('batchData').value.trim();
+    if (!data) {
+        alert('请输入学员数据');
+        return false;
+    }
+    // 检查至少有一行非空内容
+    const lines = data.split('\n');
+    let nonEmptyLines = 0;
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim()) nonEmptyLines++;
+    }
+    if (nonEmptyLines === 0) {
+        alert('请输入有效的学员数据');
+        return false;
+    }
+    // 不再做严格的字段格式校验，交给后端智能识别
+    return true;
+}
+
+// Excel文件上传验证
+function validateExcelForm() {
+    const file = document.getElementById('excelFile').files[0];
+    if (!file) {
+        alert('请选择Excel文件');
+        return false;
+    }
+    const ext = file.name.toLowerCase();
+    if (!ext.endsWith('.xlsx') && !ext.endsWith('.xls')) {
+        alert('只支持 .xlsx 或 .xls 格式的Excel文件');
+        return false;
+    }
+    return true;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}讲师审批 - 系统管理中心{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">📝 讲师审批</span>
+    </div>
+    <div class="card-body">
+        {% if pending_teachers %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">头像</th>
+                    <th>姓名</th>
+                    <th>职称</th>
+                    <th>单位</th>
+                    <th>专业领域</th>
+                    <th>申请时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for teacher in pending_teachers %}
+                <tr>
+                    <td>
+                        {% if teacher.avatar_url %}
+                        <img src="{{ teacher.avatar_url }}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                        <div style="width: 50px; height: 50px; border-radius: 50%; background: #1890ff; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: 600;">
+                            {{ teacher.name[0] }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ teacher.name }}</strong></td>
+                    <td>{{ teacher.title or '-' }}</td>
+                    <td>{{ teacher.organization or '-' }}</td>
+                    <td>{{ teacher.specialty or '-' }}</td>
+                    <td>{{ teacher.created_at.strftime('%Y-%m-%d') if teacher.created_at else '-' }}</td>
+                    <td>
+                        <a href="/teachers/{{ teacher.id }}" class="action-link">查看详情</a>
+                        <a href="/approvals/teacher/{{ teacher.id }}/approve" class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; margin-left: 8px;">通过</a>
+                        <a href="/approvals/teacher/{{ teacher.id }}/reject" class="btn btn-default" style="padding: 4px 12px; font-size: 12px; margin-left: 8px;">拒绝</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon" style="font-size: 80px;">👨‍🏫</div>
+            <h3 style="margin-bottom: 8px; color: #333;">暂无待审批的讲师</h3>
+            <p style="color: #999;">当前没有需要审批的讲师入库申请</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

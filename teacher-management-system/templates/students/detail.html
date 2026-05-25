@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.name }} - 学员详情{% endblock %}
+
+{% block content %}
+<!-- 学员基本信息 -->
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">{{ student.name }}</h1>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <span class="tag tag-blue">{{ student.gender or '未知' }}</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="/students/{{ student.id }}/edit" class="btn btn-primary">编辑</a>
+                <a href="/students/{{ student.id }}/delete" class="btn btn-default" onclick="return confirm('确定要删除该学员吗？')">删除</a>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">证件类型</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ student.id_type or '身份证' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">证件号码</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ student.id_card or '-' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">手机号</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ student.phone or '-' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">单位</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ student.company or '-' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">职务</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ student.job or '-' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">省份</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ student.province or '-' }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">上课次数</div>
+                <div style="font-size: 16px; font-weight: 500; color: #1890ff;">{{ student.attendance_count or 0 }} 次</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">创建时间</div>
+                <div style="font-size: 16px; font-weight: 500;">{{ student.created_at.strftime('%Y-%m-%d') if student.created_at else '-' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 上课情况 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">📅 上课情况</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>上课日期</th>
+                    <th>课时</th>
+                    <th>课程名称</th>
+                    <th>所属班级</th>
+                    <th>项目主任</th>
+                    <th>班主任</th>
+                    <th>评价</th>
+                    <th>评论</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in attendance_records %}
+                <tr>
+                    <td>{{ record.teaching_date.strftime('%Y-%m-%d') if record.teaching_date else '-' }}</td>
+                    <td>{{ record.duration or '-' }}</td>
+                    <td>{{ record.subject or '-' }}</td>
+                    <td>{{ record.class_name or '-' }}</td>
+                    <td>{{ record.director or '-' }}</td>
+                    <td>{{ record.teacher_manager or '-' }}</td>
+                    <td>
+                        {% if record.evaluation_score %}
+                        <span style="color: #ff4d4f; font-weight: 600;">{{ record.evaluation_score }} 分</span>
+                        {% else %}
+                        <span class="tag tag-gray">未评价</span>
+                        {% endif %}
+                    </td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">{{ record.evaluation_comment or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if not attendance_records %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <p>暂无上课记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if session.get('role') == 'student' %}
+<!-- 学员评价提交 -->
+<div class="card" style="margin-top: 20px;">
+    <div class="card-header">
+        <span class="card-title">⭐ 提交评价</span>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <form method="post" action="/students/{{ student.id }}/evaluate">
+            <div style="display: grid; gap: 16px; max-width: 500px;">
+                <div>
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-size: 14px;">评分（1-10分）</label>
+                    <input type="number" name="score" min="1" max="10" step="0.1" required
+                           style="padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; width: 120px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 6px; color: #333; font-size: 14px;">评价内容</label>
+                    <textarea name="content" rows="4" required placeholder="请输入您的评价..."
+                              style="padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; width: 100%; resize: vertical;"></textarea>
+                </div>
+                <div>
+                    <button type="submit" style="padding: 8px 24px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+                        提交评价
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

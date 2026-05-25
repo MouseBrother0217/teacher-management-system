@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ class_obj.name }} - 班级详情{% endblock %}
+
+{% block content %}
+<!-- 班级基本信息 -->
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">{{ class_obj.name }}</h1>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <span class="tag tag-blue">{{ class_obj.category_name }}</span>
+                    {% if class_obj.status == '进行中' %}
+                    <span class="tag tag-green">进行中</span>
+                    {% elif class_obj.status == '招生中' %}
+                    <span class="tag tag-blue">招生中</span>
+                    {% elif class_obj.status == '已结课' %}
+                    <span class="tag tag-gray">已结课</span>
+                    {% else %}
+                    <span class="tag tag-yellow">{{ class_obj.status }}</span>
+                    {% endif %}
+                    <!-- 显示上课时段 -->
+                    {% if class_obj.time_slots %}
+                        {% for slot in class_obj.time_slots %}
+                            {% if slot == 'morning' %}
+                            <span class="tag tag-blue">上午</span>
+                            {% elif slot == 'afternoon' %}
+                            <span class="tag tag-green">下午</span>
+                            {% elif slot == 'fullday' %}
+                            <span class="tag tag-purple">全天</span>
+                            {% elif slot == 'evening' %}
+                            <span class="tag tag-yellow">晚上</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <a href="/classes/{{ class_obj.id }}/edit" class="btn btn-primary">编辑</a>
+                <form method="post" action="/classes/{{ class_obj.id }}/delete" style="display: inline;">
+                    <button type="submit" class="btn btn-default" onclick="return confirm('确定要删除该班级吗？删除后相关课表也将被删除。')">删除</button>
+                </form>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 24px;">
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">上课日期</div>
+                <div style="font-size: 16px; font-weight: 500;">
+                    {{ class_obj.start_date.strftime('%Y-%m-%d') if class_obj.start_date else '-' }}
+                    至
+                    {{ class_obj.end_date.strftime('%Y-%m-%d') if class_obj.end_date else '-' }}
+                </div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">学员人数</div>
+                <div style="font-size: 16px; font-weight: 500; color: #1890ff;">{{ class_obj.student_count or 0 }} 人</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">课表安排</div>
+                <div style="font-size: 16px; font-weight: 500;">
+                    {% set site_names = sites|map(attribute='name')|list %}
+                    {% set arranged = 0 %}
+                    {% for s in class_schedules %}
+                        {% set is_site = s.location and s.location in site_names %}
+                        {% if s.teacher_id or is_site %}
+                            {% set arranged = arranged + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    <span style="color: #52c41a;">{{ arranged }}</span> / {{ class_schedules | length }} 节
+                </div>
+            </div>
+        </div>
+        
+        {% if class_obj.description %}
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
+            <div style="font-size: 12px; color: #999; margin-bottom: 4px;">班级介绍</div>
+            <div style="font-size: 14px; color: #666; line-height: 1.6;">{{ class_obj.description }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 标签页导航 -->
+<div class="card" style="margin-top: 16px;">
+    <div class="card-header" style="padding: 0; border-bottom: 1px solid #f0f0f0;">
+        <div style="display: flex;">
+            <a href="/classes/{{ class_obj.id }}?tab=schedule" 
+               style="padding: 16px 24px; color: {{ '#1890ff' if active_tab == 'schedule' else '#666' }}; 
+                      border-bottom: 2px solid {{ '#1890ff' if active_tab == 'schedule' else 'transparent' }};
+                      text-decoration: none; font-weight: 500;">
+                📅 班级课表
+            </a>
+            <a href="/classes/{{ class_obj.id }}?tab=students" 
+               style="padding: 16px 24px; color: {{ '#1890ff' if active_tab == 'students' else '#666' }};
+                      border-bottom: 2px solid {{ '#1890ff' if active_tab == 'students' else 'transparent' }};
+                      text-decoration: none; font-weight: 500;">
+                👥 学员列表
+            </a>
+        </div>
+    </div>
+    
+    <div class="card-body" style="padding: 0;">
+        {% if active_tab == 'students' %}
+        <!-- 学员列表 -->
+        <div style="padding: 16px; border-bottom: 1px solid #f0f0f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 14px; color: #666;">共 {{ class_students | length }} 名学员</span>
+                <div style="display: flex; gap: 8px;">
+                <a href="/classes/{{ class_obj.id }}/import-students" class="btn btn-default">📥 导入学员</a>
+                    <a href="/students/new?class_id={{ class_obj.id }}" class="btn btn-primary">➕ 新增学员</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>学员ID</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>证件类型</th>
+                        <th>证件号码</th>
+                        <th>手机号</th>
+                        <th>单位</th>
+                        <th>职务</th>
+                        <th>省份</th>
+                        <th>上课次数</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in class_students %}
+                    <tr>
+                        <td>{{ student.id }}</td>
+                        <td><strong>{{ student.name }}</strong></td>
+                        <td>{{ student.gender or '-' }}</td>
+                        <td>{{ student.id_type or '身份证' }}</td>
+                        <td>{{ student.id_card or '-' }}</td>
+                        <td>{{ student.phone or '-' }}</td>
+                        <td>{{ student.company or '-' }}</td>
+                        <td>{{ student.job or '-' }}</td>
+                        <td>{{ student.province or '-' }}</td>
+                        <td>{{ student.attendance_count or 0 }}</td>
+                        <td>
+                            <a href="/students/{{ student.id }}" class="action-link">详情</a>
+                            <span class="divider">|</span>
+                            <form method="post" action="/classes/{{ class_obj.id }}/remove-student/{{ student.id }}" style="display: inline;">
+                                <button type="submit" class="action-link danger" style="background: none; border: none; cursor: pointer;" onclick="return confirm('确定移出该学员？')">移出</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not class_students %}
+        <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <p>暂无学员</p>
+            <a href="/students/new?class_id={{ class_obj.id }}" class="btn btn-primary" style="margin-top: 16px;">添加学员</a>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <!-- 班级课表 - 表格视图 -->
+        <div style="padding: 16px; border-bottom: 1px solid #f0f0f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <span style="font-size: 14px; color: #666;">
+                        共 {{ class_schedules | length }} 节课
+                        {% set site_names = sites|map(attribute='name')|list %}
+                        {% set pending = 0 %}
+                        {% for s in class_schedules %}
+                            {% set is_site = s.location and s.location in site_names %}
+                            {% if not s.teacher_id and not is_site %}
+                                {% set pending = pending + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if pending > 0 %}
+                        <span style="color: #faad14; margin-left: 8px;">({{ pending }} 节待安排老师)</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 12px; color: #666;">签到率: <strong style="color: {% if class_obj.status in ['进行中', '已完成'] %}#52c41a{% else %}#999{% endif %};">{% if class_obj.status in ['进行中', '已完成'] %}{% if class_obj.sign_in_rate is none %}-{% else %}{{ class_obj.sign_in_rate }}%{% endif %}{% else %}-{% endif %}</strong></span>
+                    <span style="font-size: 12px; color: #666;">评价率: <strong style="color: {% if class_obj.status in ['进行中', '已完成'] %}#1890ff{% else %}#999{% endif %};">{% if class_obj.status in ['进行中', '已完成'] %}{% if class_obj.evaluation_rate is none %}-{% else %}{{ class_obj.evaluation_rate }}%{% endif %}{% else %}-{% endif %}</strong></span>
+                </div>
+            </div>
+        </div>
+        
+        {% if class_schedules %}
+        <!-- 课表表格视图 -->
+        {% set slots_order = ['morning', 'afternoon', 'fullday', 'evening'] %}
+        {% set slots_name = {'morning': '上午', 'afternoon': '下午', 'fullday': '全天', 'evening': '晚上'} %}
+        
+        <div class="schedule-table-wrapper" style="padding: 16px; overflow-x: auto;">
+            <table class="schedule-table" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="background: #f5f5f5;">
+                        <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: left; min-width: 120px;">📅 日期</th>
+                        <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; min-width: 180px;">☀️ 上午 (08:30-12:00)</th>
+                        <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; min-width: 180px;">🌤 下午 (14:00-17:30)</th>
+                        <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; min-width: 180px;">📍 全天 (08:30-17:30)</th>
+                        <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; min-width: 180px;">🌙 晚上 (18:30-21:00)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set schedules_by_date = {} %}
+                    {% for s in class_schedules %}
+                        {% set date_key = s.teaching_date.strftime('%Y-%m-%d') if s.teaching_date else '未安排' %}
+                        {% if date_key not in schedules_by_date %}
+                            {% set _ = schedules_by_date.update({date_key: []}) %}
+                        {% endif %}
+                        {% set _ = schedules_by_date[date_key].append(s) %}
+                    {% endfor %}
+                    
+                    {% for date_str in schedules_by_date.keys() | sort %}
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e8e8e8; vertical-align: top;">
+                            <div style="font-weight: 600; color: #333;">{{ date_str }}</div>
+                            <div style="font-size: 12px; color: #999;">{{ schedules_by_date[date_str][0].teaching_date.strftime('%A') if schedules_by_date[date_str][0].teaching_date else '' }}</div>
+                        </td>
+                        
+                        {% for slot_key in slots_order %}
+                        {% set slot_schedule = schedules_by_date[date_str] | selectattr('time_slot', 'equalto', slot_key) | first %}
+                        
+                        <td style="padding: 12px; border: 1px solid #e8e8e8; vertical-align: top;">
+                            {% if slot_schedule %}
+                                {% if slot_schedule.teacher_id %}
+                                <div style="background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 6px; padding: 8px;">
+                                    <div style="font-weight: 500; color: #333; margin-bottom: 4px;">{{ slot_schedule.subject or '未命名课程' }}</div>
+                                    <div style="font-size: 12px; color: #52c41a;">👨‍🏫 {{ slot_schedule.teacher_name }}</div>
+                                    {% if slot_schedule.location %}
+                                    <div style="font-size: 12px; color: #999; margin-top: 4px;">📍 {{ slot_schedule.location }}</div>
+                                    {% endif %}
+                                    <div style="margin-top: 8px; text-align: right;">
+                                        <a href="/schedules/{{ slot_schedule.id }}/edit" class="btn btn-sm btn-default" style="font-size: 11px;">修改</a>
+                                    </div>
+                                </div>
+                                {% elif slot_schedule.location and slot_schedule.location in sites|map(attribute='name')|list %}
+                                <div style="background: #fff7e6; border: 1px solid #ffd591; border-radius: 6px; padding: 8px;">
+                                    <div style="font-weight: 500; color: #333; margin-bottom: 4px;">{{ slot_schedule.subject or '未命名课程' }}</div>
+                                    <div style="font-size: 12px; color: #fa8c16;">📍 现场教学</div>
+                                    <div style="margin-top: 8px; text-align: right;">
+                                        <a href="/schedules/{{ slot_schedule.id }}/edit" class="btn btn-sm btn-default" style="font-size: 11px;">修改</a>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div style="background: #fff2f0; border: 1px solid #ffccc7; border-radius: 6px; padding: 8px;">
+                                    <div style="font-size: 12px; color: #ff4d4f; margin-bottom: 4px;">⏳ 待安排</div>
+                                    <div style="margin-top: 8px; text-align: right;">
+                                        <a href="/schedules/{{ slot_schedule.id }}/edit" class="btn btn-sm btn-primary" style="font-size: 11px;">安排</a>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div style="color: #999; font-size: 12px; text-align: center; padding: 16px 0;">-</div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 生成课表按钮 -->
+        {% if class_schedules and class_obj.status != '进行中' %}
+        <div style="padding: 16px; text-align: center; border-top: 1px solid #f0f0f0;">
+            {% set site_names = sites|map(attribute='name')|list %}
+            {% set pending_count = 0 %}
+            {% set pending_subject = 0 %}
+            {% for s in class_schedules %}
+                {% set is_site = s.location and s.location in site_names %}
+                {% if not s.teacher_id and not is_site %}
+                    {% set pending_count = pending_count + 1 %}
+                {% endif %}
+                {% if not s.subject %}
+                    {% set pending_subject = pending_subject + 1 %}
+                {% endif %}
+            {% endfor %}
+            
+            {% if pending_count == 0 and pending_subject == 0 %}
+                <form method="post" action="/classes/{{ class_obj.id }}/generate-schedule" style="display: inline;">
+                    <button type="submit" class="btn btn-success" style="font-size: 16px; padding: 12px 32px;" onclick="return confirm('确定生成课表吗？生成后班级将变为&#39;进行中&#39;状态。')">
+                        ✅ 生成课表（{{ class_schedules | length }}节课程已安排完成）
+                    </button>
+                </form>
+            {% else %}
+                <div style="color: #999; font-size: 14px;">
+                    📋 已安排 {{ class_schedules | length - pending_count }} / {{ class_schedules | length }} 节课程，全部安排完成后可生成课表
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <p>暂无课表</p>
+            <p style="font-size: 12px; color: #999; margin-top: 8px;">创建班级时已自动生成课时段，请添加老师和课程</p>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.schedule-table-wrapper {
+    overflow-x: auto;
+}
+
+.schedule-table th,
+.schedule-table td {
+    border: 1px solid #e8e8e8;
+}
+
+.schedule-table th {
+    background: #f5f5f5;
+    font-weight: 500;
+    color: #333;
+}
+
+@media (max-width: 768px) {
+    .schedule-table-wrapper {
+        overflow-x: scroll;
+    }
+    
+    .schedule-table {
+        min-width: 800px;
+    }
+}
+</style>
+{% endblock %}

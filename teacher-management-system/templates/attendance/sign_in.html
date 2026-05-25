@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}学员签到 - 系统管理中心{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">📋 学员签到</span>
+    </div>
+    
+    {% if is_student %}
+    <!-- 学员视角 -->
+    <div class="card-body" style="padding: 24px;">
+        <div style="background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+            <h3 style="margin: 0 0 8px 0; color: #52c41a;">👋 欢迎，{{ student.name }}</h3>
+            <p style="margin: 0; color: #666;">请选择班级进行签到或签退</p>
+        </div>
+        
+        {% if my_classes %}
+        <div style="display: grid; gap: 16px;">
+            {% for cls in my_classes %}
+            <div style="border: 1px solid #f0f0f0; border-radius: 8px; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="margin: 0 0 4px 0;">{{ cls.name }}</h4>
+                    <p style="margin: 0; color: #888; font-size: 13px;">
+                        {{ cls.start_date.strftime('%Y-%m-%d') if cls.start_date else '-' }} ~ 
+                        {{ cls.end_date.strftime('%Y-%m-%d') if cls.end_date else '-' }}
+                    </p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <form method="post" style="display: inline;">
+                        <input type="hidden" name="class_id" value="{{ cls.id }}">
+                        <input type="hidden" name="action" value="sign_in">
+                        <button type="submit" style="padding: 8px 16px; background: #52c41a; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            ✅ 签到
+                        </button>
+                    </form>
+                    <form method="post" style="display: inline;">
+                        <input type="hidden" name="class_id" value="{{ cls.id }}">
+                        <input type="hidden" name="action" value="sign_out">
+                        <button type="submit" style="padding: 8px 16px; background: #faad14; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🚪 签退
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #999;">
+            <p>您当前没有分配到班级</p>
+        </div>
+        {% endif %}
+        
+        <!-- 签到记录 -->
+        <h3 style="margin: 32px 0 16px 0;">📜 我的签到记录</h3>
+        {% if records %}
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+                <tr style="background: #fafafa;">
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0;">日期</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0;">签到时间</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0;">签退时间</th>
+                    <th style="padding: 12px; text-align: center; border-bottom: 1px solid #f0f0f0;">状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 12px;">{{ r.sign_in_time.strftime('%Y-%m-%d') if r.sign_in_time else '-' }}</td>
+                    <td style="padding: 12px;">{{ r.sign_in_time.strftime('%H:%M:%S') if r.sign_in_time else '-' }}</td>
+                    <td style="padding: 12px;">{{ r.sign_out_time.strftime('%H:%M:%S') if r.sign_out_time else '-' }}</td>
+                    <td style="padding: 12px; text-align: center;">
+                        {% if r.sign_in_time and r.sign_out_time %}
+                        <span style="color: #52c41a;">✅ 已完成</span>
+                        {% elif r.sign_in_time %}
+                        <span style="color: #faad14;">⏳ 已签到</span>
+                        {% else %}
+                        <span style="color: #999;">❌ 未签到</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #999;">
+            <p>暂无签到记录</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% else %}
+    <!-- 管理员/老师视角 -->
+    <div class="card-body" style="padding: 24px;">
+        <form method="get" style="display: flex; gap: 12px; margin-bottom: 24px;">
+            <select name="class_id" style="padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;">
+                <option value="">全部班级</option>
+                {% for cls in classes %}
+                <option value="{{ cls.id }}" {% if selected_class == cls.id|string %}selected{% endif %}>{{ cls.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="date" name="date" value="{{ selected_date }}" style="padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px;">
+            <button type="submit" style="padding: 8px 16px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                🔍 查询
+            </button>
+        </form>
+        
+        {% if records %}
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+                <tr style="background: #fafafa;">
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0;">学员</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0;">班级</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0;">签到时间</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0;">签退时间</th>
+                    <th style="padding: 12px; text-align: center; border-bottom: 1px solid #f0f0f0;">状态</th>
+                    <th style="padding: 12px; text-align: center; border-bottom: 1px solid #f0f0f0;">方式</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 12px;">{{ r.student.name if r.student else '-' }}</td>
+                    <td style="padding: 12px;">{{ r.class_info.name if r.class_info else '-' }}</td>
+                    <td style="padding: 12px;">{{ r.sign_in_time.strftime('%H:%M:%S') if r.sign_in_time else '-' }}</td>
+                    <td style="padding: 12px;">{{ r.sign_out_time.strftime('%H:%M:%S') if r.sign_out_time else '-' }}</td>
+                    <td style="padding: 12px; text-align: center;">
+                        {% if r.sign_in_time and r.sign_out_time %}
+                        <span style="color: #52c41a;">✅ 已完成</span>
+                        {% elif r.sign_in_time %}
+                        <span style="color: #faad14;">⏳ 已签到</span>
+                        {% else %}
+                        <span style="color: #999;">❌ 未签到</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px; text-align: center;">{{ r.sign_method or '手动' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #999;">
+            <p>暂无签到记录</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

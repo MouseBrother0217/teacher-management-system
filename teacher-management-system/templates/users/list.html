@@ -1,0 +1,581 @@
+{% extends "base.html" %}
+
+{% block title %}用户权限管理 - 师资管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>⚙️ 用户权限管理</h1>
+        <p class="subtitle">管理系统用户账号、角色和权限</p>
+    </div>
+    
+    <div class="toolbar">
+        <button class="btn btn-primary" onclick="showCreateModal()">
+            <span>➕</span> 新建用户
+        </button>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h3>用户列表</h3>
+            <span class="badge">共 {{ users|length }} 人</span>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>姓名</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th>最后登录</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr data-user-id="{{ user.id }}" data-username="{{ user.username }}">
+                        <td>{{ user.id }}</td>
+                        <td><strong>{{ user.username }}</strong></td>
+                        <td>{{ user.name or user.username }}</td>
+                        <td>
+                            <span class="role-badge role-{{ user.role }}">
+                                {{ roles.get(user.role, {}).label or user.role }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge {{ 'status-active' if user.is_active else 'status-inactive' }}">
+                                {{ '正常' if user.is_active else '已禁用' }}
+                            </span>
+                        </td>
+                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '-' }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+                        <td class="actions">
+                            <button class="btn btn-sm" onclick="showEditModal({{ user.id }}, '{{ user.username }}', '{{ user.name or user.username }}', '{{ user.role }}', {{ 'true' if user.is_active else 'false' }})" title="编辑">
+                                ✏️
+                            </button>
+                            <button class="btn btn-sm {{ 'btn-warning' if user.is_active else 'btn-success' }}" onclick="toggleUser({{ user.id }}, '{{ user.username }}')" title="{{ '禁用' if user.is_active else '启用' }}">
+                                {{ '🚫' if user.is_active else '✅' }}
+                            </button>
+                            {% if user.username != 'admin' %}
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="删除">
+                                🗑️
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 角色权限说明 -->
+    <div class="card">
+        <div class="card-header">
+            <h3>📋 角色权限说明</h3>
+        </div>
+        <div class="permissions-grid">
+            {% for role_key, role_info in roles.items() %}
+            <div class="permission-card">
+                <h4><span class="role-badge role-{{ role_key }}">{{ role_info.label }}</span></h4>
+                <ul class="permission-list">
+                    {% for perm_code, allowed_roles in permissions.items() %}
+                        {% if role_key in allowed_roles or role_key == 'admin' %}
+                        <li>
+                            <span class="check">✓</span>
+                            {{ perm_code }}
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 创建用户模态框 -->
+<div class="modal" id="createModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>➕ 新建用户</h3>
+            <button class="close-btn" onclick="closeModal('createModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="createForm">
+                <div class="form-group">
+                    <label>用户名 <span class="required">*</span></label>
+                    <input type="text" name="username" required placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" name="name" placeholder="请输入显示名称">
+                </div>
+                <div class="form-group">
+                    <label>角色 <span class="required">*</span></label>
+                    <select name="role" required>
+                        {% for role_key, role_info in roles.items() %}
+                        <option value="{{ role_key }}">{{ role_info.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>密码 <span class="required">*</span></label>
+                    <input type="password" name="password" required placeholder="请输入密码">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('createModal')">取消</button>
+            <button class="btn btn-primary" onclick="createUser()">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑用户模态框 -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>✏️ 编辑用户</h3>
+            <button class="close-btn" onclick="closeModal('editModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="editForm">
+                <input type="hidden" name="user_id" id="editUserId">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="editUsername" disabled style="background: #f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" name="name" id="editName" placeholder="请输入显示名称">
+                </div>
+                <div class="form-group">
+                    <label>角色 <span class="required">*</span></label>
+                    <select name="role" id="editRole" required>
+                        {% for role_key, role_info in roles.items() %}
+                        <option value="{{ role_key }}">{{ role_info.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>状态</label>
+                    <select name="is_active" id="editStatus">
+                        <option value="true">正常</option>
+                        <option value="false">已禁用</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>重置密码（留空则不修改）</label>
+                    <input type="password" name="password" placeholder="输入新密码重置">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('editModal')">取消</button>
+            <button class="btn btn-primary" onclick="updateUser()">保存</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    margin-bottom: 24px;
+}
+.page-header h1 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 4px;
+}
+.subtitle {
+    color: #888;
+    font-size: 14px;
+}
+
+.toolbar {
+    margin-bottom: 20px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.card-header h3 {
+    font-size: 16px;
+    color: #333;
+}
+.badge {
+    background: #e6f7ff;
+    color: #1890ff;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.data-table th {
+    background: #fafafa;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 1px solid #f0f0f0;
+}
+.data-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+}
+.data-table tr:hover {
+    background: #fafafa;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.role-admin {
+    background: #fff2f0;
+    color: #ff4d4f;
+}
+.role-center_director {
+    background: #fff7e6;
+    color: #fa8c16;
+}
+.role-project_manager {
+    background: #e6fffb;
+    color: #13c2c2;
+}
+.role-class_advisor {
+    background: #f6ffed;
+    color: #52c41a;
+}
+.role-finance_admin {
+    background: #f9f0ff;
+    color: #722ed1;
+}
+.role-teacher {
+    background: #e6f7ff;
+    color: #1890ff;
+}
+.role-student {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+.status-active {
+    background: #f6ffed;
+    color: #52c41a;
+}
+.status-inactive {
+    background: #fff2f0;
+    color: #ff4d4f;
+}
+
+.actions {
+    display: flex;
+    gap: 4px;
+}
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.btn-sm:hover {
+    background: #f0f0f0;
+}
+.btn-danger:hover {
+    background: #fff2f0;
+}
+.btn-success:hover {
+    background: #f6ffed;
+}
+.btn-warning:hover {
+    background: #fff7e6;
+}
+
+.permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    padding: 20px;
+}
+.permission-card {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 16px;
+}
+.permission-card h4 {
+    margin-bottom: 12px;
+}
+.permission-list {
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.permission-list li {
+    font-size: 13px;
+    color: #666;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.permission-list .check {
+    color: #52c41a;
+    font-weight: bold;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+.modal.active {
+    display: flex;
+}
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.modal-header h3 {
+    font-size: 18px;
+    color: #333;
+}
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+}
+.modal-body {
+    padding: 20px;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #1890ff;
+}
+.required {
+    color: #ff4d4f;
+}
+</style>
+
+<script>
+function showCreateModal() {
+    document.getElementById('createModal').classList.add('active');
+    document.getElementById('createForm').reset();
+}
+
+function showEditModal(id, username, name, role, isActive) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editName').value = name;
+    document.getElementById('editRole').value = role;
+    document.getElementById('editStatus').value = isActive ? 'true' : 'false';
+    document.getElementById('editModal').classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function createUser() {
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    const data = {
+        username: formData.get('username'),
+        name: formData.get('name'),
+        role: formData.get('role'),
+        password: formData.get('password')
+    };
+    
+    fetch('/users/api/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ ' + result.message);
+        }
+    })
+    .catch(err => alert('❌ 创建失败: ' + err));
+}
+
+function updateUser() {
+    const userId = document.getElementById('editUserId').value;
+    const form = document.getElementById('editForm');
+    const formData = new FormData(form);
+    const data = {
+        name: formData.get('name'),
+        role: formData.get('role'),
+        is_active: formData.get('is_active') === 'true',
+        password: formData.get('password') || undefined
+    };
+    
+    if (!data.password) delete data.password;
+    
+    fetch(`/users/api/${userId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ ' + result.message);
+        }
+    })
+    .catch(err => alert('❌ 更新失败: ' + err));
+}
+
+function toggleUser(userId, username) {
+    if (!confirm(`确定要${document.querySelector(`tr[data-user-id="${userId}"] .status-badge`).textContent === '正常' ? '禁用' : '启用'}用户 "${username}" 吗？`)) {
+        return;
+    }
+    
+    fetch(`/users/api/${userId}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ ' + result.message);
+        }
+    })
+    .catch(err => alert('❌ 操作失败: ' + err));
+}
+
+function deleteUser(userId, username) {
+    if (!confirm(`⚠️ 确定要删除用户 "${username}" 吗？此操作不可恢复！`)) {
+        return;
+    }
+    
+    fetch(`/users/api/${userId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            alert('✅ ' + result.message);
+            location.reload();
+        } else {
+            alert('❌ ' + result.message);
+        }
+    })
+    .catch(err => alert('❌ 删除失败: ' + err));
+}
+
+// 点击模态框外部关闭
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('active');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ class_obj.name }} - 日程安排{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">📅 日程安排</h1>
+            <p style="color: #666; font-size: 14px;">为 {{ class_obj.name }} 配置每日上课时段</p>
+        </div>
+        <a href="/classes/{{ class_obj.id }}/edit" class="btn btn-default">返回编辑班级</a>
+    </div>
+</div>
+
+<!-- 步骤指示器 -->
+<div style="display: flex; gap: 8px; margin-bottom: 24px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
+    <div style="flex: 1; text-align: center; padding: 12px; background: #fff; border-radius: 6px; border: 2px solid #52c41a;">
+        <div style="font-size: 20px; margin-bottom: 4px;">✅</div>
+        <div style="font-size: 13px; font-weight: 500; color: #52c41a;">1. 基本信息</div>
+    </div>
+    <div style="flex: 1; text-align: center; padding: 12px; background: #fff; border-radius: 6px; border: 2px solid #1890ff;">
+        <div style="font-size: 20px; margin-bottom: 4px;">⏳</div>
+        <div style="font-size: 13px; font-weight: 500; color: #1890ff;">2. 日程安排</div>
+    </div>
+    <div style="flex: 1; text-align: center; padding: 12px; background: #fff; border-radius: 6px; border: 2px solid #d9d9d9;">
+        <div style="font-size: 20px; margin-bottom: 4px;">⏳</div>
+        <div style="font-size: 13px; font-weight: 500; color: #999;">3. 课表生成</div>
+    </div>
+</div>
+
+<!-- 班级信息卡片 -->
+<div class="card" style="margin-bottom: 16px;">
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 24px;">
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">班级名称</div>
+                <div style="font-size: 16px; font-weight: 500; color: #333;">{{ class_obj.name }}</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">分类</div>
+                <span class="tag tag-blue">{{ class_obj.category_name }}</span>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #999; margin-bottom: 4px;">日期范围</div>
+                <div style="font-size: 14px; color: #333;">
+                    {{ class_obj.start_date.strftime('%Y-%m-%d') if class_obj.start_date else '-' }}
+                    至
+                    {{ class_obj.end_date.strftime('%Y-%m-%d') if class_obj.end_date else '-' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 日程安排表单 -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title">📅 每日上课安排</span>
+        <span style="font-size: 14px; color: #666;">
+            {% set site_names = sites|map(attribute='name')|list %}
+            {% set arranged = 0 %}
+            {% for s in class_schedules %}
+                {% set is_site = s.location and s.location in site_names %}
+                {% if s.teacher_id or is_site %}{% set arranged = arranged + 1 %}{% endif %}
+            {% endfor %}
+            已安排 {{ arranged }} / {{ class_schedules | length }} 节
+        </span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <form method="post" action="/classes/{{ class_obj.id }}/schedule" id="scheduleForm">
+            <div style="padding: 16px; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: left; min-width: 100px;">时段</th>
+                            {% for date_str in date_range %}
+                            {% set d = datetime.strptime(date_str, '%Y-%m-%d') %}
+                            {% set week_day = ['周一','周二','周三','周四','周五','周六','周日'][d.weekday()] %}
+                            {% set is_weekend = d.weekday() >= 5 %}
+                            <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; min-width: 110px; {% if is_weekend %}background: #fff7e6;{% endif %}">
+                                <div style="font-weight: 600;">{{ date_str }}</div>
+                                <div style="font-size: 11px; color: {% if is_weekend %}#fa8c16{% else %}#999{% endif %};">{{ week_day }}</div>
+                            </th>
+                            {% endfor %}
+                            <th style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; min-width: 60px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for slot_key, slot_info in [('morning', '☀️ 上午'), ('afternoon', '🌤 下午'), ('fullday', '📍 全天'), ('evening', '🌙 晚上')] %}
+                        {% set slot_time = {'morning': '08:30-12:00', 'afternoon': '14:00-17:30', 'fullday': '08:30-17:30', 'evening': '18:30-21:00'}[slot_key] %}
+                        <tr>
+                            <td style="padding: 12px; border: 1px solid #e8e8e8; vertical-align: top; background: #fafafa;">
+                                <div style="font-weight: 600; color: #333;">{{ slot_info }}</div>
+                                <div style="font-size: 11px; color: #999;">{{ slot_time }}</div>
+                            </td>
+                            
+                            {% for date_str in date_range %}
+                            {% set d = datetime.strptime(date_str, '%Y-%m-%d') %}
+                            {% set is_weekend = d.weekday() >= 5 %}
+                            {% set day_schedules = schedules_by_date.get(date_str, {}) %}
+                            {% set schedule = day_schedules.get(slot_key) %}
+                            
+                            <td style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; vertical-align: top; {% if is_weekend %}background: #fff7e6;{% endif %}">
+                                {% if schedule %}
+                                    {% set is_site = schedule.location and schedule.location in site_names %}
+                                    {% if schedule.teacher_id or is_site %}
+                                    <div style="background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #52c41a;">
+                                        ✅ 已安排
+                                    </div>
+                                    <div style="margin-top: 4px;">
+                                        <a href="/schedules/{{ schedule.id }}/edit?return_to=schedule" class="btn btn-sm btn-default" style="font-size: 11px;">修改</a>
+                                    </div>
+                                    {% else %}
+                                    <div style="background: #fff2f0; border: 1px solid #ffccc7; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #ff4d4f; margin-bottom: 4px;">
+                                        ⏳ 待安排
+                                    </div>
+                                    <a href="/schedules/{{ schedule.id }}/edit?return_to=schedule" class="btn btn-sm btn-primary" style="font-size: 11px;">安排</a>
+                                    {% endif %}
+                                {% else %}
+                                    <label class="slot-checkbox" style="justify-content: center;">
+                                        <input type="checkbox" name="slot_{{ date_str }}" value="{{ slot_key }}" style="width: 18px; height: 18px; cursor: pointer; accent-color: #1890ff;">
+                                    </label>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            
+                            <td style="padding: 12px; border: 1px solid #e8e8e8; text-align: center; vertical-align: top; background: #fafafa;">
+                                <span style="font-size: 12px; color: #999;">
+                                    {% set slot_count = 0 %}
+                                    {% for ds in schedules_by_date.values() %}
+                                        {% if slot_key in ds %}{% set slot_count = slot_count + 1 %}{% endif %}
+                                    {% endfor %}
+                                    {{ slot_count }} 天
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 底部操作 -->
+            <div style="padding: 16px; text-align: center; border-top: 1px solid #f0f0f0;">
+                <button type="submit" class="btn btn-primary" style="margin-right: 12px;">
+                    💾 保存时段配置
+                </button>
+                
+                {% if class_schedules %}
+                    {% set pending = 0 %}
+                    {% for s in class_schedules %}
+                        {% set is_site = s.location and s.location in site_names %}
+                        {% if not s.teacher_id and not is_site %}{% set pending = pending + 1 %}{% endif %}
+                    {% endfor %}
+                    {% if pending == 0 %}
+                    <a href="/classes/{{ class_obj.id }}/edit" class="btn btn-success">
+                        ✅ 生成课表（全部已安排）
+                    </a>
+                    {% else %}
+                    <button type="button" class="btn btn-default" disabled style="opacity: 0.5;">
+                        ⏳ 还有 {{ pending }} 节待安排
+                    </button>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.btn {
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+    border: none;
+}
+.btn-primary {
+    background: #1890ff;
+    color: #fff;
+}
+.btn-success {
+    background: #52c41a;
+    color: #fff;
+}
+.btn-default {
+    background: #fff;
+    color: #666;
+    border: 1px solid #d9d9d9;
+}
+.btn-sm {
+    padding: 4px 12px;
+    font-size: 12px;
+}
+.slot-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.slot-checkbox:hover {
+    background: #f0f7ff;
+}
+</style>
+
+<script>
+// 时段互斥：选全天则取消同日期其他时段
+const scheduleForm = document.getElementById('scheduleForm');
+scheduleForm.addEventListener('change', function(e) {
+    if (e.target.type !== 'checkbox' || !e.target.name.startsWith('slot_')) return;
+
+    const dateKey = e.target.name;
+    const val = e.target.value;
+
+    if (val === 'fullday' && e.target.checked) {
+        document.querySelectorAll(`input[name="${dateKey}"]:not([value="fullday"])`).forEach(cb => {
+            cb.checked = false;
+        });
+    } else if (val !== 'fullday' && e.target.checked) {
+        const fd = document.querySelector(`input[name="${dateKey}"][value="fullday"]`);
+        if (fd) fd.checked = false;
+    }
+});
+</script>
+{% endblock %}

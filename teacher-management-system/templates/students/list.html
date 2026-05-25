@@ -9,11 +9,13 @@
         <input type="text" name="name" placeholder="姓名" value="{{ keyword }}"
                style="width: 120px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
         
+{% if session.get('role') != 'teacher' %}
         <input type="text" name="phone" placeholder="手机号码" 
                style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
         
         <input type="text" name="unit" placeholder="单位" 
                style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        {% endif %}
         
         <select name="class_id" style="width: 140px; padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; color: #666;">
             <option value="">请选择班级</option>
@@ -61,9 +63,11 @@
     <button style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">
         📥 导入学员
     </button>
-    <button style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">
+    {% if session.get('role') in ['admin', 'center_director'] %}
+    <button onclick="window.location.href='/students/export'" style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">
         📤 导出学员
     </button>
+    {% endif %}
 </div>
 
 <!-- 学员数据表格 - 截图1:1复刻 -->
@@ -73,11 +77,17 @@
             <tr style="background: #fafafa;">
                 <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">姓名</th>
                 <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">性别</th>
+                {% if session.get('role') != 'teacher' %}
                 <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">手机号码</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">证件类型</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">证件号码</th>
+                {% endif %}
                 <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">参训次数</th>
+                {% if session.get('role') != 'teacher' %}
                 <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">单位</th>
-                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">职业</th>
-                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">省份/城市</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">职务</th>
+                {% endif %}
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">省份</th>
                 <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">操作</th>
             </tr>
         </thead>
@@ -96,17 +106,27 @@
                     <span style="color: #999;">-</span>
                     {% endif %}
                 </td>
+                {% if session.get('role') != 'teacher' %}
                 <td style="padding: 12px 16px;">{{ student.phone or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ student.id_type or '身份证' }}</td>
+                <td style="padding: 12px 16px;">{{ student.id_card or '-' }}</td>
+                {% endif %}
                 <td style="padding: 12px 16px; text-align: center;">
                     <span style="color: #1890ff; font-weight: 500;">{{ student.total_attendance or 1 }}</span>
                 </td>
+                {% if session.get('role') != 'teacher' %}
                 <td style="padding: 12px 16px;">{{ student.company or '-' }}</td>
                 <td style="padding: 12px 16px;">{{ student.job or '-' }}</td>
+                {% endif %}
                 <td style="padding: 12px 16px; text-align: center;">
-                    {{ student.province or '' }}{% if student.province and student.city %}/{% endif %}{{ student.city or '' }}
+                    {{ student.province or '-' }}
                 </td>
                 <td style="padding: 12px 16px; text-align: center;">
+                    {% if session.get('role') != 'teacher' %}
                     <a href="/students/{{ student.id }}/edit" style="color: #1890ff; text-decoration: none; font-size: 13px;">✎ 编辑</a>
+                    {% else %}
+                    <span style="color: #999; font-size: 13px;">-</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if student %}编辑学员{% else %}新增学员{% endif %} - 系统管理中心{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">{% if student %}✏️ 编辑学员{% else %}➕ 新增学员{% endif %}</span>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% if student %}/students/{{ student.id }}/edit{% else %}/students/new{% endif %}">
+            {% if request.args.get('return_class_id') %}
+            <input type="hidden" name="return_class_id" value="{{ request.args.get('return_class_id') }}">
+            {% endif %}
+            <div class="form-section">
+                <h3 class="form-section-title">👤 基本信息</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">姓名 <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-input" value="{{ student.name if student else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">性别 <span class="required">*</span></label>
+                        <select name="gender" class="form-select" required>
+                            <option value="">请选择</option>
+                            <option value="男" {% if student and student.gender == '男' %}selected{% endif %}>男</option>
+                            <option value="女" {% if student and student.gender == '女' %}selected{% endif %}>女</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">证件类型 <span class="required">*</span></label>
+                        <select name="id_type" class="form-select" required>
+                            <option value="身份证" {% if student and (student.id_type or '身份证') == '身份证' %}selected{% endif %}>身份证</option>
+                            <option value="护照" {% if student and student.id_type == '护照' %}selected{% endif %}>护照</option>
+                            <option value="其他" {% if student and student.id_type == '其他' %}selected{% endif %}>其他</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">证件号码 <span class="required">*</span></label>
+                        <input type="text" name="id_card" class="form-input" value="{{ student.id_card if student else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">手机号 <span class="required">*</span></label>
+                        <input type="tel" name="phone" class="form-input" value="{{ student.phone if student else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">单位 <span class="required">*</span></label>
+                        <input type="text" name="company" class="form-input" value="{{ student.company if student else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">职务 <span class="required">*</span></label>
+                        <input type="text" name="job" class="form-input" value="{{ student.job if student else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">省份</label>
+                        <input type="text" name="province" class="form-input" value="{{ student.province if student else '' }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3 class="form-section-title">📚 班级信息</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">所属班级</label>
+                        <select name="class_id" class="form-select">
+                            <option value="">请选择</option>
+                            {% for c in classes %}
+                            <option value="{{ c.id }}" {% if (student and student.class_id == c.id) or (request.args.get('class_id')|int == c.id) %}selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 保存</button>
+                {% if request.args.get('return_class_id') %}
+                <a href="/classes/{{ request.args.get('return_class_id') }}/edit" class="btn btn-default">取消</a>
+                {% else %}
+                <a href="/students" class="btn btn-default">取消</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.form-section:last-of-type {
+    border-bottom: none;
+}
+.form-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    padding-left: 12px;
+    border-left: 4px solid #1890ff;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 24px;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-label {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.required {
+    color: #ff4d4f;
+}
+.form-input,
+.form-select,
+.form-textarea {
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: #1890ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+.form-textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+}
+</style>
+{% endblock %}

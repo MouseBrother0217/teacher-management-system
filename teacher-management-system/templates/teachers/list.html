@@ -207,9 +207,18 @@ function teacherApp() {
                 result = result.filter(t => {
                     const searchText = [
                         t.name, t.field, t.title, t.specialty, 
-                        t.introduction, t.organization, t.phone
+                        t.introduction, t.organization, t.phone,
+                        t.contact_phone, t.course_info
                     ].join(' ').toLowerCase();
-                    return keywords.every(k => searchText.includes(k));
+                    
+                    // 同时搜索课程名称（来自teaching_records）
+                    let courseNames = '';
+                    if (t.teaching_records && Array.isArray(t.teaching_records)) {
+                        courseNames = t.teaching_records.map(r => r['课程名称'] || '').join(' ').toLowerCase();
+                    }
+                    
+                    const fullSearchText = searchText + ' ' + courseNames;
+                    return keywords.every(k => fullSearchText.includes(k));
                 });
             }
             

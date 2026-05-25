@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if teacher %}编辑讲师{% else %}新增讲师{% endif %} - 系统管理中心{% endblock %}
+
+{% block content %}
+<!-- 页面标题 -->
+<div style="background: #fff; padding: 16px 24px; margin-bottom: 16px; border-bottom: 1px solid #f0f0f0;">
+    <div style="font-size: 20px; font-weight: 500; color: #333;">
+        {% if teacher %}✏️ 编辑讲师{% else %}➕ 新增讲师{% endif %}
+    </div>
+</div>
+
+<form method="post" action="{% if teacher %}/teachers/{{ teacher.id }}/edit{% else %}/teachers/new{% endif %}" style="background: #fff; padding: 24px;">
+    
+    <!-- 基本信息区块 -->
+    <div style="margin-bottom: 32px;">
+        <div style="font-size: 16px; font-weight: 500; color: #1890ff; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #1890ff;">
+            基本信息
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 24px;">
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">
+                    姓名 <span style="color: #ff4d4f;">*</span>
+                </label>
+                <input type="text" name="name" required
+                       value="{{ teacher.name if teacher else '' }}"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">性别</label>
+                <select name="gender" style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; background: #fff;">
+                    <option value="">请选择</option>
+                    <option value="男" {% if teacher and teacher.gender == '男' %}selected{% endif %}>男</option>
+                    <option value="女" {% if teacher and teacher.gender == '女' %}selected{% endif %}>女</option>
+                </select>
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">职称</label>
+                <input type="text" name="title"
+                       value="{{ teacher.title if teacher else '' }}"
+                       placeholder="如：高级讲师、教授"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">所在单位</label>
+                <input type="text" name="organization"
+                       value="{{ teacher.organization if teacher else '' }}"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">学历</label>
+                <select name="education" style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; background: #fff;">
+                    <option value="">请选择</option>
+                    <option value="博士" {% if teacher and teacher.education == '博士' %}selected{% endif %}>博士</option>
+                    <option value="硕士" {% if teacher and teacher.education == '硕士' %}selected{% endif %}>硕士</option>
+                    <option value="本科" {% if teacher and teacher.education == '本科' %}selected{% endif %}>本科</option>
+                    <option value="其他" {% if teacher and teacher.education == '其他' %}selected{% endif %}>其他</option>
+                </select>
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">专业</label>
+                <input type="text" name="major"
+                       value="{{ teacher.major if teacher else '' }}"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div style="grid-column: span 2;">
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">专业领域</label>
+                <input type="text" name="specialty"
+                       value="{{ teacher.specialty if teacher else '' }}"
+                       placeholder="多个领域用逗号分隔，如：企业管理、领导力、团队建设"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">讲师级别</label>
+                <select name="level" style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; background: #fff;">
+                    <option value="">请选择</option>
+                    <option value="普通" {% if teacher and teacher.level == '普通' %}selected{% endif %}>普通</option>
+                    <option value="高级" {% if teacher and teacher.level == '高级' %}selected{% endif %}>高级</option>
+                    <option value="资深" {% if teacher and teacher.level == '资深' %}selected{% endif %}>资深</option>
+                    <option value="特邀" {% if teacher and teacher.level == '特邀' %}selected{% endif %}>特邀</option>
+                </select>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">个人简介</label>
+            <textarea name="introduction" rows="4" placeholder="请输入讲师的个人简介、教学经历等"
+                      style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; resize: vertical; box-sizing: border-box;">{{ teacher.introduction if teacher else '' }}</textarea>
+        </div>
+        
+        <!-- 头像上传 -->
+        <div style="margin-top: 20px;">
+            <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">头像</label>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                {% if teacher and teacher.avatar_url %}
+                <img src="{{ teacher.avatar_url }}" id="avatarPreview" style="width: 80px; height: 80px; border-radius: 4px; object-fit: cover; border: 1px solid #f0f0f0;">
+                {% else %}
+                <div id="avatarPreview" style="width: 80px; height: 80px; border-radius: 4px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; border: 1px dashed #d9d9d9;">
+                    暂无头像
+                </div>
+                {% endif %}
+                <input type="file" name="avatar" accept="image/*" onchange="previewAvatar(this)" style="font-size: 14px;">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 联系方式区块 -->
+    <div style="margin-bottom: 32px;">
+        <div style="font-size: 16px; font-weight: 500; color: #1890ff; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #1890ff;">
+            联系方式
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 24px;">
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">
+                    手机号 <span style="color: #ff4d4f;">*</span>
+                </label>
+                <input type="tel" name="phone" required
+                       value="{{ teacher.phone if teacher else '' }}"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">邮箱</label>
+                <input type="email" name="email"
+                       value="{{ teacher.email if teacher else '' }}"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">身份证号</label>
+                <input type="text" name="id_card"
+                       value="{{ teacher.id_card if teacher else '' }}"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; font-family: monospace; box-sizing: border-box;">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 银行账户区块 -->
+    <div style="margin-bottom: 32px;">
+        <div style="font-size: 16px; font-weight: 500; color: #1890ff; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #1890ff;">
+            银行账户
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px 24px;">
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">开户银行</label>
+                <input type="text" name="bank_name"
+                       value="{{ teacher.bank_name if teacher else '' }}"
+                       placeholder="如：中国工商银行"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">银行卡号</label>
+                <input type="text" name="bank_card"
+                       value="{{ teacher.bank_card if teacher else '' }}"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; font-family: monospace; box-sizing: border-box;">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 课酬标准区块 -->
+    <div style="margin-bottom: 32px;">
+        <div style="font-size: 16px; font-weight: 500; color: #1890ff; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #1890ff;">
+            课酬标准
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 24px;">
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">税前课酬（元/半天）</label>
+                <input type="number" name="compensation_before_tax" step="0.01"
+                       value="{{ teacher.compensation_before_tax if teacher else '' }}"
+                       placeholder="0.00"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">税后课酬（元/半天）</label>
+                <input type="number" name="compensation_after_tax" step="0.01"
+                       value="{{ teacher.compensation_after_tax if teacher else '' }}"
+                       placeholder="0.00"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 14px; color: #333; margin-bottom: 8px;">服务客户</label>
+                <input type="text" name="service_customers"
+                       value="{{ teacher.service_customers if teacher else '' }}"
+                       placeholder="服务过的主要客户"
+                       style="width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; box-sizing: border-box;">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div style="display: flex; gap: 12px; justify-content: center; padding-top: 24px; border-top: 1px solid #f0f0f0;">
+        <button type="submit" style="padding: 10px 32px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            保存
+        </button>
+        <a href="/teachers" style="padding: 10px 32px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; text-decoration: none; display: inline-block;">
+            取消
+        </a>
+    </div>
+</form>
+
+<script>
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var preview = document.getElementById('avatarPreview');
+            if (preview.tagName === 'IMG') {
+                preview.src = e.target.result;
+            } else {
+                var img = document.createElement('img');
+                img.src = e.target.result;
+                img.id = 'avatarPreview';
+                img.style.width = '80px';
+                img.style.height = '80px';
+                img.style.borderRadius = '4px';
+                img.style.objectFit = 'cover';
+                img.style.border = '1px solid #f0f0f0';
+                preview.parentNode.replaceChild(img, preview);
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

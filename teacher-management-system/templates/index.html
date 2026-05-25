@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - 系统管理中心{% endblock %}
+
+{% block content %}
+<!-- 欢迎卡片 -->
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h2 style="font-size: 24px; margin-bottom: 8px;">你好，管理员 👋</h2>
+                <p style="color: #666;">今天是 {{ today }}，祝你工作愉快！</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 32px; font-weight: 600; color: #1890ff;">{{ total_classes }}</div>
+                <div style="color: #999; font-size: 14px;">本月开班数</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px;">
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 60px; height: 60px; background: #e6f7ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                📋
+            </div>
+            <div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">待办事项</div>
+                <div style="font-size: 28px; font-weight: 600; color: #333;">{{ stats.pending }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 60px; height: 60px; background: #fff2e8; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                ⏰
+            </div>
+            <div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">待审批</div>
+                <div style="font-size: 28px; font-weight: 600; color: #333;">{{ stats.approvals }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 60px; height: 60px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                👨‍🏫
+            </div>
+            <div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">师资总数</div>
+                <div style="font-size: 28px; font-weight: 600; color: #333;">{{ stats.teachers }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 60px; height: 60px; background: #f9f0ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                👥
+            </div>
+            <div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">学员总数</div>
+                <div style="font-size: 28px; font-weight: 600; color: #333;">{{ stats.students }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 今日开班准备完成度 -->
+{% if class_count > 0 %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-body">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h3 style="font-size: 16px; font-weight: 500; margin: 0 0 8px 0; color: #333;">📊 今日班级开班准备完成度</h3>
+                <p style="font-size: 13px; color: #999; margin: 0;">共 {{ class_count }} 个班级今日开课，整体完成度 {{ total_progress }}%</p>
+            </div>
+            <div style="text-align: center; min-width: 100px;">
+                <div style="
+                    font-size: 32px; font-weight: 600;
+                    color: {% if total_progress == 100 %}#52c41a{% elif total_progress >= 80 %}#1890ff{% elif total_progress >= 50 %}#faad14{% else %}#ff4d4f{% endif %};
+                ">
+                    {{ total_progress }}%
+                </div>
+                <div style="font-size: 12px; color: #999;">整体完成度</div>
+            </div>
+        </div>
+        <!-- 进度条 -->
+        <div style="margin-top: 16px; height: 8px; background: #f5f5f5; border-radius: 4px; overflow: hidden;">
+            <div style="
+                width: {{ total_progress }}%;
+                height: 100%;
+                background: {% if total_progress == 100 %}#52c41a{% elif total_progress >= 80 %}#1890ff{% elif total_progress >= 50 %}#faad14{% else %}#ff4d4f{% endif %};
+                border-radius: 4px;
+                transition: width 0.5s ease;
+            "></div>
+        </div>
+        
+        <!-- 各班级 checklist 快捷入口 -->
+        <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px;">
+            {% for schedule in today_schedules %}
+            {% set cid = schedule.class_id %}
+            {% set progress = today_classes_progress.get(cid) %}
+            <a href="/classes/{{ cid }}/checklist" 
+               style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; 
+                      background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 4px; 
+                      text-decoration: none; color: #52c41a; font-size: 13px;">
+                <span>📝 {{ schedule.class_name }}</span>
+                {% if progress %}
+                <span style="color: #999;">{{ progress.percentage }}%</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- 今日课表 -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📅 今日课表</span>
+            <a href="/schedules" class="action-link">查看全部</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if today_schedules %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>课程</th>
+                        <th>班级</th>
+                        <th>教室/教学点</th>
+                        <th>授课老师</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for schedule in today_schedules %}
+                    <tr>
+                        <td>{{ schedule.start_time }} - {{ schedule.end_time }}</td>
+                        <td>{{ schedule.subject }}</td>
+                        <td>
+                            <a href="/classes/{{ schedule.class_id }}/checklist" style="text-decoration: none; color: #1890ff;">
+                                {{ schedule.class_name }}
+                                {% set progress = today_classes_progress.get(schedule.class_id) %}
+                                {% if progress %}
+                                <div style="display: inline-flex; align-items: center; gap: 6px; margin-left: 8px;">
+                                    <div style="width: 60px; height: 6px; background: #f5f5f5; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle;">
+                                        <div style="
+                                            width: {{ progress.percentage }}%;
+                                            height: 100%;
+                                            background: {% if progress.percentage == 100 %}#52c41a{% elif progress.percentage >= 80 %}#1890ff{% elif progress.percentage >= 50 %}#faad14{% else %}#ff4d4f{% endif %};
+                                            border-radius: 3px;
+                                        "></div>
+                                    </div>
+                                    <span style="font-size: 11px; color: {% if progress.percentage == 100 %}#52c41a{% elif progress.percentage >= 80 %}#1890ff{% elif progress.percentage >= 50 %}#faad14{% else %}#ff4d4f{% endif %};">
+                                        {{ progress.percentage }}%
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </a>
+                        </td>
+                        <td>{{ schedule.location }}</td>
+                        <td>{{ schedule.teacher_name }}</td>
+                        <td>
+                            {% if schedule.status == '已完成' %}
+                            <span class="tag tag-green">已完成</span>
+                            {% elif schedule.status == '进行中' %}
+                            <span class="tag tag-blue">进行中</span>
+                            {% else %}
+                            <span class="tag tag-yellow">待上课</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📅</div>
+                <p>今日暂无课程安排</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 日程日历 -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📆 日程日历</span>
+        </div>
+        <div class="card-body">
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">{{ current_month }}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-bottom: 8px;">
+                <div style="color: #999; font-size: 12px;">日</div>
+                <div style="color: #999; font-size: 12px;">一</div>
+                <div style="color: #999; font-size: 12px;">二</div>
+                <div style="color: #999; font-size: 12px;">三</div>
+                <div style="color: #999; font-size: 12px;">四</div>
+                <div style="color: #999; font-size: 12px;">五</div>
+                <div style="color: #999; font-size: 12px;">六</div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;">
+                {% for day in calendar_days %}
+                <div style="
+                    padding: 8px; 
+                    border-radius: 4px; 
+                    font-size: 14px;
+                    {% if day.is_today %}background: #1890ff; color: white;{% elif day.has_event %}background: #e6f7ff; color: #1890ff;{% else %}color: #333;{% endif %}
+                ">
+                    {{ day.date }}
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <div style="width: 12px; height: 12px; background: #1890ff; border-radius: 2px;"></div>
+                    <span style="font-size: 12px; color: #666;">今天</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #e6f7ff; border-radius: 2px;"></div>
+                    <span style="font-size: 12px; color: #666;">有课程安排</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷操作 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">⚡ 快捷操作</span>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px;">
+            <a href="/classes/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增班级
+            </a>
+            <a href="/teachers/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增师资
+            </a>
+            <a href="/schedules/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增课表
+            </a>
+            <a href="/students/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增学员
+            </a>
+            <a href="/classrooms/new" class="btn btn-default" style="justify-content: center;">
+                <span>➕</span> 新增教室
+            </a>
+            <a href="/sites/new" class="btn btn-default" style="justify-content: center;">
+                <span>➕</span> 新增教学点
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

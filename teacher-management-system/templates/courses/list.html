@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}课程管理 - 系统管理中心{% endblock %}
+
+{% block content %}
+<!-- 搜索栏 -->
+<div class="card">
+    <div class="card-body">
+        <form method="get" action="/courses" class="search-bar">
+            <input type="text" name="keyword" class="search-input" placeholder="搜索课程名称..." value="{{ keyword }}">
+            <select name="category_id" class="search-select">
+                <option value="">全部分类</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if selected_category == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">🔍 搜索</button>
+            <a href="/courses" class="btn btn-default">重置</a>
+            <div style="flex: 1; text-align: right;">
+                <a href="/courses/new" class="btn btn-primary">➕ 新增课程</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 课程列表 -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">ID</th>
+                    <th>课程名称</th>
+                    <th>可授讲师</th>
+                    <th>讲师数量</th>
+                    <th>分类</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr>
+                    <td>{{ course.id }}</td>
+                    <td>
+                        <strong>{{ course.name }}</strong>
+                    </td>
+                    <td style="max-width: 200px;">
+                        {% if course.teacher_name and course.teacher_name != '-' %}
+                        <span class="tag tag-green">{{ course.teacher_name }}</span>
+                        {% else %}
+                        <span class="tag tag-gray">未关联</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if course.teacher_count > 0 %}
+                        <span class="tag tag-blue">{{ course.teacher_count }} 位</span>
+                        {% else %}
+                        <span>-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if course.category_name %}
+                        <span class="tag tag-blue">{{ course.category_name }}</span>
+                        {% else %}
+                        <span class="tag tag-gray">未分类</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ course.created_at.strftime('%Y-%m-%d') if course.created_at else '-' }}</td>
+                    <td>
+                        <a href="/courses/{{ course.id }}/edit" class="action-link">编辑</a>
+                        <a href="/courses/{{ course.id }}/delete" class="action-link danger" onclick="return confirm('确定要删除该课程吗？')">删除</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if not courses %}
+        <div class="empty-state">
+            <div class="empty-icon">📖</div>
+            <p>暂无课程数据</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
