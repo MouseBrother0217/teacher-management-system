@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session
 from datetime import datetime
 from auth_module import login_required_web
+from auth_decorators import require_role, log_operation
 
 teachers_bp = Blueprint('teachers', __name__, url_prefix='/teachers')
 
@@ -183,8 +184,9 @@ def detail(id):
 
 @teachers_bp.route('/new', methods=['GET', 'POST'])
 @login_required_web
+@require_role('admin', 'center_director', 'project_manager')
 def new():
-    """新增教师"""
+    """新增教师（需要管理员、中心主任或项目主任权限）"""
     g = _get_globals()
     teachers = g['teachers']
     
@@ -203,6 +205,13 @@ def new():
             'created_at': datetime.now()
         }
         teachers.append(new_teacher)
+        
+        # 记录操作日志
+        log_operation('create_teacher', 'teacher', new_teacher['id'], new_teacher['name'], {
+            'created_by': session.get('username'),
+            'role': session.get('role')
+        })
+        
         flash('教师添加成功', 'success')
         return redirect(url_for('teachers.teachers_list'))
     
@@ -212,8 +221,10 @@ def new():
 # ==================== 编辑教师 ====================
 
 @teachers_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
+@login_required_web
+@require_role('admin', 'center_director', 'project_manager')
 def edit(id):
-    """编辑教师"""
+    """编辑教师（需要管理员、中心主任或项目主任权限）"""
     g = _get_globals()
     teachers = g['teachers']
     
@@ -223,6 +234,7 @@ def edit(id):
         return redirect(url_for('teachers.teachers_list'))
     
     if request.method == 'POST':
+        old_name = teacher.get('name', '')
         teacher['name'] = request.form.get('name')
         teacher['title'] = request.form.get('title')
         teacher['field'] = request.form.get('field')
@@ -231,6 +243,14 @@ def edit(id):
         teacher['organization'] = request.form.get('organization')
         teacher['phone'] = request.form.get('phone')
         teacher['email'] = request.form.get('email')
+        
+        # 记录操作日志
+        log_operation('update_teacher', 'teacher', id, teacher['name'], {
+            'updated_by': session.get('username'),
+            'role': session.get('role'),
+            'old_name': old_name
+        })
+        
         flash('教师更新成功', 'success')
         return redirect(url_for('teachers.detail', id=id))
     
@@ -240,15 +260,25 @@ def edit(id):
 # ==================== 删除教师 ====================
 
 @teachers_bp.route('/<int:id>/delete', methods=['POST'])
+@login_required_web
+@require_role('admin', 'center_director')
 def delete(id):
-    """删除教师"""
+    """删除教师（需要管理员或中心主任权限）"""
     g = _get_globals()
     teachers = g['teachers']
     
     teacher = next((t for t in teachers if t['id'] == id), None)
     if teacher:
+        teacher_name = teacher.get('name', 'unknown')
         teachers.remove(teacher)
-        flash('教师删除成功', 'success')
+        
+        # 记录操作日志
+        log_operation('delete_teacher', 'teacher', id, teacher_name, {
+            'deleted_by': session.get('username'),
+            'role': session.get('role')
+        })
+        
+        flash(f'教师 "{teacher_name}" 删除成功', 'success')
     else:
         flash('教师不存在', 'error')
     return redirect(url_for('teachers.teachers_list'))
