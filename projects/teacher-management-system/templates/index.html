@@ -1,62 +1,166 @@
 {% extends 'base.html' %}
 
-{% block title %}首页 - 浙大继续教育师资管理系统{% endblock %}
+{% block title %}首页 - 系统管理中心{% endblock %}
 
 {% block content %}
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-number">{{ stats.total_teachers }}</div>
-        <div class="stat-label">师资总数</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ stats.total_courses }}</div>
-        <div class="stat-label">课程总数</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ stats.total_records }}</div>
-        <div class="stat-label">上课记录</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ stats.total_evaluations }}</div>
-        <div class="stat-label">评价总数</div>
+<!-- 欢迎栏 - 截图风格 -->
+<div style="background: #fff; padding: 20px 24px; margin-bottom: 16px; border-radius: 4px;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <div style="font-size: 20px; font-weight: 500; color: #333; margin-bottom: 8px;">
+                👋 Hello! 管理员, 欢迎来到师资管理系统
+            </div>
+            <div style="font-size: 14px; color: #999;">
+                上次登录时间: 2026-04-19 11:30:00
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="section">
-    <h2>🚀 快速导航</h2>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
-        <a href="/teachers" style="text-decoration: none;">
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; text-align: center; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                <div style="font-size: 40px; margin-bottom: 10px;">👨‍🏫</div>
-                <div style="font-weight: bold; color: #333;">师资管理</div>
-                <div style="color: #666; font-size: 14px; margin-top: 5px;">查看、搜索、管理教师信息</div>
-            </div>
-        </a>
-        <a href="/teaching-records" style="text-decoration: none;">
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; text-align: center; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                <div style="font-size: 40px; margin-bottom: 10px;">📅</div>
-                <div style="font-weight: bold; color: #333;">课表管理</div>
-                <div style="color: #666; font-size: 14px; margin-top: 5px;">排课、查看上课记录</div>
-            </div>
-        </a>
-        <a href="#" style="text-decoration: none;">
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; text-align: center; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                <div style="font-size: 40px; margin-bottom: 10px;">⭐</div>
-                <div style="font-weight: bold; color: #333;">评价管理</div>
-                <div style="color: #666; font-size: 14px; margin-top: 5px;">查看学员评价、统计</div>
-            </div>
-        </a>
+<!-- 统计卡片 - 截图1:1复刻 -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+    <!-- 今日待办 -->
+    <div style="background: #fff; padding: 20px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.09)';" onmouseout="this.style.boxShadow='none';">
+        <div style="font-size: 14px; color: #666; margin-bottom: 12px;">今日待办</div>
+        <div style="font-size: 32px; font-weight: 600; color: #1890ff;">{{ stats.today_todo or 3 }}</div>
+    </div>
+    <!-- 课酬审批 -->
+    <div style="background: #fff; padding: 20px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.09)';" onmouseout="this.style.boxShadow='none';">
+        <div style="font-size: 14px; color: #666; margin-bottom: 12px;">课酬审批</div>
+        <div style="font-size: 32px; font-weight: 600; color: #fa8c16;">{{ stats.compensation_pending or 2 }}</div>
+    </div>
+    <!-- 讲师审批 -->
+    <div style="background: #fff; padding: 20px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.09)';" onmouseout="this.style.boxShadow='none';">
+        <div style="font-size: 14px; color: #666; margin-bottom: 12px;">讲师审批</div>
+        <div style="font-size: 32px; font-weight: 600; color: #52c41a;">{{ stats.teacher_pending or 0 }}</div>
+    </div>
+    <!-- 现场教学审批 -->
+    <div style="background: #fff; padding: 20px; border-radius: 4px; cursor: pointer;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.09)';" onmouseout="this.style.boxShadow='none';">
+        <div style="font-size: 14px; color: #666; margin-bottom: 12px;">现场教学审批</div>
+        <div style="font-size: 32px; font-weight: 600; color: #722ed1;">{{ stats.site_pending or 1 }}</div>
     </div>
 </div>
 
-<div class="section">
-    <h2>📊 系统说明</h2>
-    <p style="color: #666; line-height: 1.8;">
-        本系统用于浙江大学继续教育方向师资管理，支持：<br>
-        • <strong>师资管理</strong>：1900+教师档案管理，支持按姓名、专业领域、级别搜索<br>
-        • <strong>课表管理</strong>：排课、上课记录、签到率/评价率统计<br>
-        • <strong>评价管理</strong>：学员评价收集、4维度点赞统计（案例丰富、氛围活跃、重点突出、幽默风趣）<br>
-        • <strong>学员管理</strong>：学员档案、参课记录、小程序关联<br>
-    </p>
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- 今日课表 -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📅 今日课表</span>
+            <a href="/schedules" class="action-link">查看全部</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if today_schedules %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>课程</th>
+                        <th>班级</th>
+                        <th>教室/教学点</th>
+                        <th>授课老师</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for schedule in today_schedules %}
+                    <tr>
+                        <td>{{ schedule.start_time }} - {{ schedule.end_time }}</td>
+                        <td>{{ schedule.subject }}</td>
+                        <td>{{ schedule.class_name }}</td>
+                        <td>{{ schedule.location }}</td>
+                        <td>{{ schedule.teacher_name }}</td>
+                        <td>
+                            {% if schedule.status == '已完成' %}
+                            <span class="tag tag-green">已完成</span>
+                            {% elif schedule.status == '进行中' %}
+                            <span class="tag tag-blue">进行中</span>
+                            {% else %}
+                            <span class="tag tag-yellow">待上课</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📅</div>
+                <p>今日暂无课程安排</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 日程日历 -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📆 日程日历</span>
+        </div>
+        <div class="card-body">
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">{{ current_month }}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-bottom: 8px;">
+                <div style="color: #999; font-size: 12px;">日</div>
+                <div style="color: #999; font-size: 12px;">一</div>
+                <div style="color: #999; font-size: 12px;">二</div>
+                <div style="color: #999; font-size: 12px;">三</div>
+                <div style="color: #999; font-size: 12px;">四</div>
+                <div style="color: #999; font-size: 12px;">五</div>
+                <div style="color: #999; font-size: 12px;">六</div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;">
+                {% for day in calendar_days %}
+                <div style="
+                    padding: 8px; 
+                    border-radius: 4px; 
+                    font-size: 14px;
+                    {% if day.is_today %}background: #1890ff; color: white;{% elif day.has_event %}background: #e6f7ff; color: #1890ff;{% else %}color: #333;{% endif %}
+                ">
+                    {{ day.date }}
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <div style="width: 12px; height: 12px; background: #1890ff; border-radius: 2px;"></div>
+                    <span style="font-size: 12px; color: #666;">今天</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; background: #e6f7ff; border-radius: 2px;"></div>
+                    <span style="font-size: 12px; color: #666;">有课程安排</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷操作 -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">⚡ 快捷操作</span>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px;">
+            <a href="/classes/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增班级
+            </a>
+            <a href="/teachers/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增师资
+            </a>
+            <a href="/schedules/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增课表
+            </a>
+            <a href="/students/new" class="btn btn-primary" style="justify-content: center;">
+                <span>➕</span> 新增学员
+            </a>
+            <a href="/classrooms/new" class="btn btn-default" style="justify-content: center;">
+                <span>➕</span> 新增教室
+            </a>
+            <a href="/sites/new" class="btn btn-default" style="justify-content: center;">
+                <span>➕</span> 新增教学点
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}

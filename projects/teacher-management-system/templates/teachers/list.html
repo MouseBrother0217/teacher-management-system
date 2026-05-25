@@ -1,131 +1,201 @@
 {% extends 'base.html' %}
+{% from 'macros/top_nav.html' import top_nav_tabs %}
 
-{% block title %}师资管理 - 浙大继续教育师资管理系统{% endblock %}
+{% block title %}师资管理 - 系统管理中心{% endblock %}
 
 {% block content %}
-<!-- 搜索栏 -->
-<div class="search-bar">
-    <input type="text" name="keyword" placeholder="搜索教师姓名、专业领域、手机号..." value="{{ keyword }}">
-    <select name="type">
-        <option value="">全部类型</option>
-        <option value="校内" {% if type == '校内' %}selected{% endif %}>校内</option>
-        <option value="校外" {% if type == '校外' %}selected{% endif %}>校外</option>
-    </select>
-    <select name="level">
-        <option value="">全部级别</option>
-        <option value="普通" {% if level == '普通' %}selected{% endif %}>普通</option>
-        <option value="高级" {% if level == '高级' %}selected{% endif %}>高级</option>
-    </select>
-    <button type="button" class="btn btn-primary" onclick="search()">🔍 搜索</button>
+<!-- 顶部Tab导航 -->
+{{ top_nav_tabs('teachers') }}
+
+<!-- 搜索栏 - 截图风格 -->
+<div style="background: #fff; padding: 20px 24px; margin-bottom: 16px;">
+    <form method="get" action="/teachers" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        <input type="text" name="keyword" placeholder="讲师姓名" value="{{ keyword }}" 
+               style="width: 140px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        <input type="text" name="phone" placeholder="联系电话" 
+               style="width: 140px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        <input type="text" name="intro" placeholder="讲师介绍" 
+               style="width: 140px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        <input type="text" name="course" placeholder="课程名称" 
+               style="width: 140px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        <input type="text" name="course_intro" placeholder="课程介绍" 
+               style="width: 140px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px;">
+        <select name="in_stock" style="width: 140px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; color: #666;">
+            <option value="">请选择是否入库</option>
+            <option value="是" {% if in_stock == '是' %}selected{% endif %}>是</option>
+            <option value="否" {% if in_stock == '否' %}selected{% endif %}>否</option>
+        </select>
+        <select name="approval_status" style="width: 140px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; color: #666;">
+            <option value="">请选择审批状态</option>
+            <option value="已通过" {% if approval_status == '已通过' %}selected{% endif %}>已通过</option>
+            <option value="待审核" {% if approval_status == '待审核' %}selected{% endif %}>待审核</option>
+        </select>
+        <button type="submit" style="padding: 8px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            🔍 搜索
+        </button>
+        <button type="button" onclick="window.location.href='/teachers'" style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            ⟳ 重置
+        </button>
+    </form>
 </div>
 
-<!-- 教师列表 -->
-<div class="data-table">
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 60px;">ID</th>
-                <th style="width: 80px;">头像</th>
-                <th>姓名</th>
-                <th>专业领域</th>
-                <th>类型</th>
-                <th>级别</th>
-                <th>上课次数</th>
-                <th>评分</th>
-                <th>入库状态</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for teacher in teachers.items %}
-            <tr>
-                <td>{{ teacher.id }}</td>
-                <td>
-                    {% if teacher.avatar_url %}
-                    <img src="{{ teacher.avatar_url }}" style="width: 50px; height: 50px; border-radius: 4px; object-fit: cover;">
-                    {% else %}
-                    <div style="width: 50px; height: 50px; background: #e5e7eb; border-radius: 4px; display: flex; align-items: center; justify-content: center;">👤</div>
-                    {% endif %}
-                </td>
-                <td>
-                    <strong>{{ teacher.name }}</strong>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px;">{{ teacher.phone_masked }}</div>
-                </td>
-                <td>{{ teacher.field }}</td>
-                <td>
-                    {% if teacher.teacher_type == '校内' %}
-                    <span class="tag tag-blue">校内</span>
-                    {% else %}
-                    <span class="tag tag-yellow">校外</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if teacher.level == '高级' %}
-                    <span class="tag tag-blue">高级</span>
-                    {% else %}
-                    <span class="tag">普通</span>
-                    {% endif %}
-                </td>
-                <td>{{ teacher.total_teaching_count }}</td>
-                <td class="score">{{ teacher.overall_score }}</td>
-                <td>
-                    {% if teacher.is_in_storage %}
-                    <span class="tag tag-green">已入库</span>
-                    {% else %}
-                    <span class="tag tag-yellow">未入库</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="/teachers/{{ teacher.id }}" class="btn btn-primary" style="padding: 5px 15px;">查看</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- 分页 -->
-{% if teachers.pages > 1 %}
-<div class="pagination">
-    {% if teachers.has_prev %}
-    <a href="?page={{ teachers.prev_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if level %}&level={{ level }}{% endif %}">上一页</a>
-    {% endif %}
+<!-- 操作按钮栏 + 排序 -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <button onclick="window.location.href='/teachers/new'" style="padding: 8px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+            ➕ 新增讲师
+        </button>
+        <button onclick="alert('导入功能开发中')" style="padding: 8px 20px; background: #fff; color: #666; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; cursor: pointer; margin-left: 8px;">
+            📥 导入讲师
+        </button>
+    </div>
     
-    {% for page_num in teachers.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
-        {% if page_num %}
-            {% if page_num == teachers.page %}
-            <a href="?page={{ page_num }}" class="active">{{ page_num }}</a>
-            {% else %}
-            <a href="?page={{ page_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if level %}&level={{ level }}{% endif %}">{{ page_num }}</a>
-            {% endif %}
-        {% else %}
-            <span>...</span>
+    <!-- 排序选项 + 导出 -->
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <a href="/teachers/export{% if keyword %}?keyword={{ keyword }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}" 
+           style="padding: 6px 12px; background: #52c41a; color: #fff; border-radius: 4px; font-size: 13px; text-decoration: none; margin-right: 8px;">
+            📊 导出Excel
+        </a>
+        <span style="color: #666; font-size: 14px;">排序：</span>
+        <a href="?sort=score{% if keyword %}&keyword={{ keyword }}{% endif %}{% if status %}&status={{ status }}{% endif %}" 
+           style="padding: 6px 12px; {% if sort == 'score' %}background: #1890ff; color: #fff;{% else %}background: #fff; color: #666; border: 1px solid #d9d9d9;{% endif %} border-radius: 4px; font-size: 13px; text-decoration: none;">
+            按评分
+        </a>
+        <a href="?sort=count{% if keyword %}&keyword={{ keyword }}{% endif %}{% if status %}&status={{ status }}{% endif %}" 
+           style="padding: 6px 12px; {% if sort == 'count' %}background: #1890ff; color: #fff;{% else %}background: #fff; color: #666; border: 1px solid #d9d9d9;{% endif %} border-radius: 4px; font-size: 13px; text-decoration: none;">
+            按上课次数
+        </a>
+        <a href="?sort=name{% if keyword %}&keyword={{ keyword }}{% endif %}{% if status %}&status={{ status }}{% endif %}" 
+           style="padding: 6px 12px; {% if sort == 'name' %}background: #1890ff; color: #fff;{% else %}background: #fff; color: #666; border: 1px solid #d9d9d9;{% endif %} border-radius: 4px; font-size: 13px; text-decoration: none;">
+            按姓名
+        </a>
+        {% if sort %}
+        <a href="?{% if keyword %}keyword={{ keyword }}{% endif %}{% if status %}&status={{ status }}{% endif %}" 
+           style="padding: 6px 12px; background: #fff; color: #999; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; text-decoration: none;">
+            取消排序
+        </a>
         {% endif %}
+    </div>
+</div>
+
+<!-- 师资卡片列表 - 截图1:1复刻风格 -->
+<div style="display: flex; flex-direction: column; gap: 16px;">
+    {% for teacher in teachers %}
+    <div style="background: #fff; padding: 20px 24px; display: flex; align-items: flex-start; gap: 16px; cursor: pointer; transition: box-shadow 0.3s;"
+         onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.09)';" 
+         onmouseout="this.style.boxShadow='none';"
+         onclick="window.location.href='/teachers/{{ teacher.id }}'">
+        
+        <!-- 左侧头像 -->
+        <div style="flex-shrink: 0;">
+            {% if teacher.avatar_url %}
+            <img src="{{ teacher.avatar_url }}" alt="{{ teacher.name }}" 
+                 style="width: 72px; height: 72px; border-radius: 4px; object-fit: cover; border: 1px solid #f0f0f0;">
+            {% else %}
+            <div style="width: 72px; height: 72px; border-radius: 4px; background: #1890ff; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: 500;">
+                {{ teacher.name[0] }}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- 中间信息区 -->
+        <div style="flex: 1; min-width: 0;">
+            <!-- 姓名 -->
+            <div style="font-size: 16px; font-weight: 500; color: #333; margin-bottom: 8px;">{{ teacher.name }}</div>
+            
+            <!-- 简介 - 截图风格 -->
+            <div style="font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 8px;">
+                {{ teacher.introduction or teacher.organization or '暂无简介' }}
+            </div>
+            
+            <!-- 状态标签 -->
+            <div style="display: flex; gap: 8px;">
+                {% if teacher.status == '已入库' or teacher.in_stock %}
+                <span style="padding: 2px 8px; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px;">已入库</span>
+                {% endif %}
+                {% if teacher.approval_status == '已通过' %}
+                <span style="padding: 2px 8px; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px;">已通过</span>
+                {% elif teacher.approval_status == '待审核' %}
+                <span style="padding: 2px 8px; background: #fffbe6; color: #faad14; border: 1px solid #ffe58f; border-radius: 4px; font-size: 12px;">待审核</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 右侧评分和操作 -->
+        <div style="flex-shrink: 0; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 12px;">
+            <!-- 评分圆圈 - 截图红色风格 -->
+            <div style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid #ff4d4f; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #fff;">
+                <span style="font-size: 18px; font-weight: 600; color: #ff4d4f;">{{ teacher.evaluation_score or 10 }}</span>
+            </div>
+            <div style="font-size: 12px; color: #999;">创建者：{{ teacher.creator or '管理员' }}</div>
+            <div style="font-size: 12px; color: #999;">{{ teacher.created_at.strftime('%Y-%m-%d %H:%M:%S') if teacher.created_at else '' }}</div>
+            
+            <!-- 编辑按钮 -->
+            <a href="/teachers/{{ teacher.id }}/edit" style="font-size: 13px; color: #1890ff; text-decoration: none;" onclick="event.stopPropagation();">
+                ✎ 编辑
+            </a>
+        </div>
+    </div>
     {% endfor %}
-    
-    {% if teachers.has_next %}
-    <a href="?page={{ teachers.next_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if level %}&level={{ level }}{% endif %}">下一页</a>
-    {% endif %}
+</div>
+
+<!-- 空状态 -->
+{% if not teachers %}
+<div style="background: #fff; padding: 60px 24px; text-align: center;">
+    <div style="font-size: 48px; margin-bottom: 16px;">👨‍🏫</div>
+    <p style="color: #999; margin-bottom: 16px;">暂无师资数据</p>
+    <button onclick="window.location.href='/teachers/new'" style="padding: 8px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer;">
+        ➕ 新增师资
+    </button>
 </div>
 {% endif %}
 
-<script>
-function search() {
-    const keyword = document.querySelector('input[name="keyword"]').value;
-    const type = document.querySelector('select[name="type"]').value;
-    const level = document.querySelector('select[name="level"]').value;
+<!-- 分页 + 页码跳转 -->
+{% if pagination and pagination.pages > 1 %}
+<div style="background: #fff; padding: 16px 24px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+    <!-- 左侧：分页信息 -->
+    <div style="color: #666; font-size: 14px;">
+        共 {{ pagination.total }} 位讲师，第 {{ pagination.page }}/{{ pagination.pages }} 页
+    </div>
     
-    let url = '/teachers?';
-    if (keyword) url += 'keyword=' + encodeURIComponent(keyword) + '&';
-    if (type) url += 'type=' + encodeURIComponent(type) + '&';
-    if (level) url += 'level=' + encodeURIComponent(level) + '&';
+    <!-- 中间：页码导航 -->
+    <div style="display: flex; gap: 8px; align-items: center;">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}" 
+           style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">上一页</a>
+        {% endif %}
+        
+        {% for page in pagination.pages_list %}
+            {% if page == '...' %}
+            <span style="padding: 6px 12px; color: #999;">...</span>
+            {% elif page == pagination.page %}
+            <span style="padding: 6px 12px; background: #1890ff; color: #fff; border-radius: 4px; font-size: 14px;">{{ page }}</span>
+            {% else %}
+            <a href="?page={{ page }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}" 
+               style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">{{ page }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if keyword %}&keyword={{ keyword }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}" 
+           style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">下一页</a>
+        {% endif %}
+    </div>
     
-    window.location.href = url;
-}
-
-// 回车搜索
-document.querySelector('input[name="keyword"]').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') search();
-});
-</script>
+    <!-- 右侧：页码跳转 -->
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <span style="color: #666; font-size: 14px;">跳转到</span>
+        <form method="get" action="/teachers" style="display: flex; gap: 8px; align-items: center; margin: 0;">
+            <input type="hidden" name="keyword" value="{{ keyword or '' }}">
+            {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+            <input type="number" name="page" min="1" max="{{ pagination.pages }}" value="{{ pagination.page }}"
+                   style="width: 60px; padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 14px; text-align: center;">
+            <span style="color: #666; font-size: 14px;">/{{ pagination.pages }} 页</span>
+            <button type="submit" style="padding: 6px 12px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">
+                跳转
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

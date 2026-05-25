@@ -3,140 +3,260 @@
 {% block title %}{{ teacher.name }} - 师资详情{% endblock %}
 
 {% block content %}
-<!-- 教师基本信息 -->
-<div class="detail-header">
-    {% if teacher.avatar_url %}
-    <img src="{{ teacher.avatar_url }}" class="avatar" alt="{{ teacher.name }}">
-    {% else %}
-    <div style="width: 120px; height: 120px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 60px;">👤</div>
-    {% endif %}
-    
-    <div class="detail-info">
-        <h1>
-            {{ teacher.name }}
-            {% if teacher.level == '高级' %}
-            <span class="tag tag-blue">高级讲师</span>
-            {% endif %}
-        </h1>
-        <p style="color: #666; margin-top: 8px;">{{ teacher.description or '暂无简介' }}</p>
+<!-- 返回按钮 -->
+<div style="margin-bottom: 16px;">
+    <a href="/teachers" style="color: #666; text-decoration: none; font-size: 14px;">← 返回师资列表</a>
+</div>
+
+<!-- 师资详情卡片 -->
+<div style="background: #fff; padding: 24px; margin-bottom: 16px;">
+    <div style="display: flex; gap: 24px; align-items: flex-start;">
+        <!-- 左侧：头像 + 评分 -->
+        <div style="flex-shrink: 0; text-align: center;">
+            <!-- 头像 -->
+            <div style="margin-bottom: 16px;">
+                {% if teacher.avatar_url %}
+                <img src="{{ teacher.avatar_url }}" alt="{{ teacher.name }}" style="width: 100px; height: 100px; border-radius: 4px; object-fit: cover; border: 1px solid #f0f0f0;">
+                {% else %}
+                <div style="width: 100px; height: 100px; border-radius: 4px; background: #1890ff; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; font-weight: 500;">
+                    {{ teacher.name[0] }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 评分圆圈 -->
+            <div style="width: 56px; height: 56px; border-radius: 50%; border: 2px solid #ff4d4f; display: flex; align-items: center; justify-content: center; flex-direction: column; margin: 0 auto; background: #fff;">
+                <span style="font-size: 18px; font-weight: 600; color: #ff4d4f;">{{ teacher.evaluation_score or 0 }}</span>
+            </div>
+            <div style="font-size: 12px; color: #999; margin-top: 4px;">综合评分</div>
+        </div>
         
-        <div class="detail-meta">
-            <span>📱 {{ teacher.phone_masked or '未填写' }}</span>
-            <span>🏷️ {{ teacher.field }}</span>
-            <span>💰 半天课酬: ¥{{ teacher.lecture_fee_half_day or 0 }}</span>
-            <span>📊 综合评分: <span class="score">{{ teacher.overall_score }}</span></span>
-            <span>📝 上课次数: {{ teacher.total_teaching_count }}</span>
-            <span>👁️ 评价数: {{ teacher.total_evaluations }}</span>
+        <!-- 右侧：详细信息 -->
+        <div style="flex: 1; min-width: 0;">
+            <!-- 姓名行 -->
+            <div style="font-size: 20px; font-weight: 500; color: #333; margin-bottom: 16px;">
+                {{ teacher.name }}
+                {% if teacher.status == '已入库' %}
+                <span style="padding: 2px 8px; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px; margin-left: 8px;">已入库</span>
+                {% else %}
+                <span style="padding: 2px 8px; background: #fffbe6; color: #faad14; border: 1px solid #ffe58f; border-radius: 4px; font-size: 12px; margin-left: 8px;">待审核</span>
+                {% endif %}
+            </div>
+            
+            <!-- 基本信息 - 两列布局，匹配截图 -->
+            <div style="font-size: 14px; font-weight: 500; color: #1890ff; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e6f7ff;">基本信息</div>
+            
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 40px; margin-bottom: 24px;">
+                <!-- 左列 -->
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">税前课酬</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.compensation_before_tax or '-' }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">讲师类型</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.teacher_type or '-' }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">税后课酬</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.compensation_after_tax or '-' }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">是否入库</div>
+                    <div style="font-size: 14px; color: #333;">{{ '是' if teacher.status == '已入库' else '否' }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">身份证号</div>
+                    <div style="font-size: 14px; color: #333; font-family: monospace;">{{ teacher.id_card or '-' }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">开户银行</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.bank_name or '-' }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">所属领域</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.field or '-' }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">银行卡号</div>
+                    <div style="font-size: 14px; color: #333; font-family: monospace;">{{ teacher.bank_card or '-' }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">上课次数</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.teaching_count or 0 }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">综合评分</div>
+                    <div style="font-size: 14px; color: #333; font-weight: 500;">{{ teacher.evaluation_score or 0 }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">服务客户</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.service_customers or '-' }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">讲师级别</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.level or '-' }}</div>
+                </div>
+                
+                <div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">手机号</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.phone or '-' }}</div>
+                </div>
+                
+                <div style="grid-column: span 2;">
+                    <div style="font-size: 12px; color: #999; margin-bottom: 4px;">课程信息</div>
+                    <div style="font-size: 14px; color: #333;">{{ teacher.course_info or '-' }}</div>
+                </div>
+            </div>
+            
+            <!-- 个人简介 -->
+            <div style="font-size: 14px; font-weight: 500; color: #1890ff; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e6f7ff;">个人简介</div>
+            
+            <div style="margin-bottom: 16px;">
+                <div style="font-size: 14px; color: #333; line-height: 1.8; white-space: pre-line;">{{ teacher.introduction or '-' }}</div>
+            </div>
         </div>
     </div>
-    
-    <div style="margin-left: auto; text-align: right;">
-        {% if teacher.is_in_storage %}
-        <span class="tag tag-green" style="font-size: 14px; padding: 8px 20px;">✓ 已入库</span>
-        {% else %}
-        <span class="tag tag-yellow" style="font-size: 14px; padding: 8px 20px;">待入库</span>
+</div>
+
+<!-- 编辑按钮 -->
+<div style="margin-bottom: 16px; text-align: right;">
+    <a href="/teachers/{{ teacher.id }}/edit" style="padding: 8px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; text-decoration: none; display: inline-block;">
+        ✎ 编辑资料
+    </a>
+</div>
+
+<!-- 上课情况 - 可展开收起 -->
+<div style="background: #fff; margin-bottom: 16px;">
+    <div style="padding: 16px 24px; border-bottom: 1px solid #f0f0f0; font-size: 16px; font-weight: 500; color: #333; display: flex; justify-content: space-between; align-items: center;">
+        <span>上课情况 ({{ teaching_records|length }}条)</span>
+        {% if teaching_records|length > 5 %}
+        <button onclick="toggleSection('teaching-records', this)" style="padding: 6px 12px; background: #f0f0f0; border: none; border-radius: 4px; font-size: 13px; color: #666; cursor: pointer;">
+            展开更多 ▼
+        </button>
         {% endif %}
     </div>
-</div>
-
-<!-- 财务信息 -->
-<div class="section">
-    <h2>💳 财务信息</h2>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-        <div>
-            <div style="color: #999; font-size: 14px;">半天课酬</div>
-            <div style="font-size: 20px; font-weight: bold; margin-top: 5px;">¥{{ teacher.lecture_fee_half_day or 0 }}</div>
-        </div>
-        <div>
-            <div style="color: #999; font-size: 14px;">全天课酬</div>
-            <div style="font-size: 20px; font-weight: bold; margin-top: 5px;">¥{{ teacher.lecture_fee_full_day or 0 }}</div>
-        </div>
-        <div>
-            <div style="color: #999; font-size: 14px;">开户银行</div>
-            <div style="font-size: 16px; margin-top: 5px;">{{ teacher.bank_name or '未填写' }}</div>
-        </div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+            <tr style="background: #fafafa;">
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">上课时间</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">课时</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">课程名称</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">所属班级</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">项目主任</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">班主任</th>
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">上课人数</th>
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">评分</th>
+            </tr>
+        </thead>
+        <tbody id="teaching-records">
+            {% for record in teaching_records %}
+            <tr class="record-row" style="border-bottom: 1px solid #f0f0f0; {% if loop.index > 5 %}display: none;{% endif %}">
+                <td style="padding: 12px 16px;">{{ record['上课时间'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ record['课时'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ record['课程名称'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ record['所属班级'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ record['项目主任'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ record['班主任'] or '-' }}</td>
+                <td style="padding: 12px 16px; text-align: center;">{{ record['上课人数'] or '-' }}</td>
+                <td style="padding: 12px 16px; text-align: center; color: #ff4d4f; font-weight: 500;">{{ record['评分'] or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if not teaching_records %}
+    <div style="padding: 60px 24px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
+        <p style="color: #999;">暂无上课记录</p>
     </div>
-</div>
-
-<!-- 课程信息 -->
-<div class="section">
-    <h2>📚 授课课程（{{ courses|length }}门）</h2>
-    {% if courses %}
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
-        {% for course in courses %}
-        <span style="background: #e1effe; color: #1e429f; padding: 8px 15px; border-radius: 20px; font-size: 14px;">
-            📖 {{ course.name }}
-        </span>
-        {% endfor %}
-    </div>
-    {% else %}
-    <p style="color: #999;">暂无课程信息</p>
     {% endif %}
 </div>
 
-<!-- 上课记录 -->
-<div class="section">
-    <h2>📅 最近上课记录</h2>
-    {% if records %}
-    <table style="margin-top: 15px;">
+<!-- 教师评价 - 点赞统计 -->
+<div style="background: #fff; padding: 20px 24px; margin-bottom: 16px;">
+    <div style="font-size: 16px; font-weight: 500; color: #333; margin-bottom: 16px;">教师评价</div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
         <thead>
-            <tr>
-                <th>日期</th>
-                <th>课时</th>
-                <th>班级</th>
-                <th>人数</th>
-                <th>评分</th>
-                <th>课酬</th>
+            <tr style="background: #fafafa;">
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0; width: 70%;">点赞内容</th>
+                <th style="padding: 12px 16px; text-align: center; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0; width: 30%;">点赞次数</th>
             </tr>
         </thead>
         <tbody>
-            {% for record in records %}
-            <tr>
-                <td>{{ record.teaching_date }}</td>
-                <td>{{ record.duration_type }}</td>
-                <td>{{ record.class_id }}</td>
-                <td>{{ record.student_count }}</td>
-                <td class="score">{{ record.score or '-' }}</td>
-                <td>¥{{ record.lecture_fee or 0 }}</td>
+            {% for like in likes_data %}
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 12px 16px;">{{ like['点赞内容'] or '-' }}</td>
+                <td style="padding: 12px 16px; text-align: center; color: #ff4d4f; font-weight: 500;">{{ like['点赞次数'] or 0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if not likes_data %}
+    <div style="padding: 40px 24px; text-align: center;">
+        <p style="color: #999;">暂无点赞数据</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 学员评价列表 - 可展开收起 -->
+<div style="background: #fff;">
+    <div style="padding: 16px 24px; border-bottom: 1px solid #f0f0f0; font-size: 16px; font-weight: 500; color: #333; display: flex; justify-content: space-between; align-items: center;">
+        <span>学员评价 ({{ detailed_evaluations|length }}条)</span>
+        {% if detailed_evaluations|length > 5 %}
+        <button onclick="toggleSection('evaluations', this)" style="padding: 6px 12px; background: #f0f0f0; border: none; border-radius: 4px; font-size: 13px; color: #666; cursor: pointer;">
+            展开更多 ▼
+        </button>
+        {% endif %}
+    </div>
+    
+    {% if detailed_evaluations %}
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+            <tr style="background: #fafafa;">
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">评价时间</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">评价人</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">所属班级</th>
+                <th style="padding: 12px 16px; text-align: left; font-weight: 500; color: #333; border-bottom: 1px solid #f0f0f0;">评论</th>
+            </tr>
+        </thead>
+        <tbody id="evaluations">
+            {% for eval in detailed_evaluations %}
+            <tr class="eval-row" style="border-bottom: 1px solid #f0f0f0; {% if loop.index > 5 %}display: none;{% endif %}">
+                <td style="padding: 12px 16px;">{{ eval['评价时间'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ eval['评价人'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ eval['所属班级'] or '-' }}</td>
+                <td style="padding: 12px 16px;">{{ eval['评论'] or '-' }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p style="color: #999;">暂无上课记录</p>
+    <div style="padding: 60px 24px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+        <p style="color: #999;">暂无学员评价</p>
+    </div>
     {% endif %}
 </div>
 
-<!-- 评价统计 -->
-{% if eval_stats %}
-<div class="section">
-    <h2>⭐ 评价统计（4维度点赞）</h2>
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 15px;">
-        <div style="text-align: center; padding: 20px; background: #fef3c7; border-radius: 8px;">
-            <div style="font-size: 28px; font-weight: bold; color: #92400e;">{{ eval_stats.tag_case_rich }}</div>
-            <div style="font-size: 14px; color: #666; margin-top: 5px;">案例丰富<br>贴近实际</div>
-        </div>
-        <div style="text-align: center; padding: 20px; background: #e1effe; border-radius: 8px;">
-            <div style="font-size: 28px; font-weight: bold; color: #1e429f;">{{ eval_stats.tag_atmosphere_active }}</div>
-            <div style="font-size: 14px; color: #666; margin-top: 5px;">氛围活跃<br>时常互动</div>
-        </div>
-        <div style="text-align: center; padding: 20px; background: #def7ec; border-radius: 8px;">
-            <div style="font-size: 28px; font-weight: bold; color: #046c4e;">{{ eval_stats.tag_key_points_clear }}</div>
-            <div style="font-size: 14px; color: #666; margin-top: 5px;">重点突出<br>层次分明</div>
-        </div>
-        <div style="text-align: center; padding: 20px; background: #fce7f3; border-radius: 8px;">
-            <div style="font-size: 28px; font-weight: bold; color: #9d174d;">{{ eval_stats.tag_humor_fun }}</div>
-            <div style="font-size: 14px; color: #666; margin-top: 5px;">幽默风趣<br>寓教于乐</div>
-        </div>
-    </div>
-    <div style="margin-top: 20px; text-align: center; color: #666;">
-        总点赞数: <strong style="font-size: 20px; color: #1a56db;">{{ eval_stats.total_likes }}</strong>
-    </div>
-</div>
-{% endif %}
-
-<!-- 返回按钮 -->
-<div style="margin-top: 30px;">
-    <a href="/teachers" class="btn btn-primary">← 返回列表</a>
-</div>
+<!-- 展开收起脚本 -->
+<script>
+function toggleSection(sectionId, btn) {
+    const rows = document.querySelectorAll('.' + sectionId + '-row');
+    const isExpanded = btn.textContent.includes('收起');
+    
+    rows.forEach((row, index) => {
+        if (index >= 5) {
+            row.style.display = isExpanded ? 'none' : 'table-row';
+        }
+    });
+    
+    btn.textContent = isExpanded ? '展开更多 ▼' : '收起 ▲';
+}
+</script>
 {% endblock %}
