@@ -34,6 +34,7 @@ def client():
             is_active=True
         )
         db.session.add(user)
+        db.session.flush()  # 获取 user.id
         
         # 创建测试教师数据
         for i in range(1, 101):
@@ -41,27 +42,25 @@ def client():
                 id=i,
                 name=f'测试教师{i}',
                 phone=f'1380013{str(i).zfill(4)}',
-                email=f'teacher{i}@example.com',
-                title='高级讲师',
-                organization='浙江大学',
-                status='已入库',
-                evaluation_score=9.0,
-                creator='管理员',
-                created_at=datetime(2026, 1, 1)
+                field='管理学',
+                description='拥有10年企业培训经验',
+                teacher_type='校外',
+                is_in_storage=True,
+                level='高级',
+                created_at=datetime(2026, 1, 1),
+                created_by=user.id
             )
             db.session.add(teacher)
         
-        # 创建测试课程数据
+        db.session.flush()
+        
+        # 创建测试课程数据（关联第一个教师）
         for i in range(1, 11):
             course = Course(
                 id=i,
+                teacher_id=1,
                 name=f'测试课程{i}',
-                category='党政培训',
-                type='必修',
-                duration=8,
-                credit=1.0,
-                status='已审核',
-                creator='管理员',
+                description='测试课程描述',
                 created_at=datetime(2026, 1, 1)
             )
             db.session.add(course)
