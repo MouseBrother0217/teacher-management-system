@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}数据导入导出 - 系统管理中心{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">📥 数据导入导出</h1>
+    <p style="color: #666; font-size: 14px;">上传 CSV/Excel → 自动清洗 → 预览确认 → 导入数据库</p>
+</div>
+
+<!-- 导入类型卡片 -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    {% for key, conf in config.items() %}
+    <div class="card" style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 48px; height: 48px; border-radius: 8px; background: #e6f7ff; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                {% if key == 'teachers' %}👨‍🏫{% endif %}
+                {% if key == 'classrooms' %}🏫{% endif %}
+                {% if key == 'sites' %}🌐{% endif %}
+                {% if key == 'students' %}👥{% endif %}
+                {% if key == 'courses' %}📖{% endif %}
+            </div>
+            <div>
+                <div style="font-size: 16px; font-weight: 500; color: #333;">{{ conf.name }}</div>
+                <div style="font-size: 13px; color: #999; margin-top: 2px;">必填: {{ conf.required_fields | join(', ') }}</div>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 8px;">
+            <a href="/import/template/{{ key }}" class="btn btn-sm btn-default" style="flex: 1; text-align: center; text-decoration: none;">
+                📄 下载模板
+            </a>
+            <button onclick="document.getElementById('upload-{{ key }}').click()" class="btn btn-sm btn-primary" style="flex: 1;">
+                📤 上传导入
+            </button>
+        </div>
+        
+        <form method="post" action="/import/upload" enctype="multipart/form-data" style="display: none;">
+            <input type="hidden" name="file_type" value="{{ key }}">
+            <input type="file" id="upload-{{ key }}" name="file" accept=".csv,.xlsx,.xls" onchange="this.form.submit()">
+        </form>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 导入历史 -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title">📋 导入历史</span>
+        <a href="/import/logs" style="font-size: 13px; color: #1890ff; text-decoration: none;">查看全部 →</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        {% if logs %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="background: #f5f5f5;">
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">批次ID</th>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">类型</th>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">文件名</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">结果</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">状态</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">时间</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        <td style="padding: 12px 16px; font-family: monospace; font-size: 12px; color: #666;">
+                            {{ log.batch_id[:8] }}...
+                        </td>
+                        <td style="padding: 12px 16px;">
+                            <span style="padding: 2px 8px; background: #e6f7ff; color: #1890ff; border-radius: 4px; font-size: 12px;">
+                                {{ config[log.file_type].name if log.file_type in config else log.file_type }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; font-size: 13px;">{{ log.filename or '-' }}</td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            <span style="font-size: 13px; color: #666;">
+                                ✅ {{ log.success_rows }} / ⚠️ {{ log.failed_rows }} / 📊 {{ log.total_rows }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; 
+                                {% if log.status == 'imported' %}background: #f6ffed; color: #52c41a;{% endif %}
+                                {% if log.status == 'preview' %}background: #e6f7ff; color: #1890ff;{% endif %}
+                                {% if log.status == 'rolled_back' %}background: #fff7e6; color: #fa8c16;{% endif %}
+                                {% if log.status == 'failed' %}background: #fff2f0; color: #ff4d4f;{% endif %}">
+                                {{ log.status_label }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center; font-size: 13px; color: #999;">
+                            {{ log.created_at.strftime('%m-%d %H:%M') if log.created_at else '-' }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            {% if log.status == 'preview' %}
+                            <a href="/import/preview/{{ log.batch_id }}" style="font-size: 13px; color: #1890ff; text-decoration: none;">预览</a>
+                            {% elif log.status == 'imported' %}
+                            <form method="post" action="/import/rollback/{{ log.batch_id }}" style="display: inline;">
+                                <button type="submit" onclick="return confirm('确定回滚本次导入？数据将恢复为导入前状态。')" style="font-size: 13px; color: #ff4d4f; background: none; border: none; cursor: pointer;">
+                                    ↩️ 回滚
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="padding: 40px; text-align: center; color: #999;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📭</div>
+            <p>暂无导入记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s;
+}
+</style>
+{% endblock %}

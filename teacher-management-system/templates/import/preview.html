@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}导入预览 - {{ log.batch_id[:8] }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">🔍 导入预览</h1>
+            <p style="color: #666; font-size: 14px;">批次: {{ log.batch_id }}</p>
+        </div>
+        <a href="/import/" class="btn btn-default">← 返回导入首页</a>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 600; color: #1890ff;">{{ log.total_rows }}</div>
+        <div style="font-size: 13px; color: #666; margin-top: 4px;">总行数</div>
+    </div>
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 600; color: #52c41a;">{{ log.success_rows }}</div>
+        <div style="font-size: 13px; color: #666; margin-top: 4px;">有效数据</div>
+    </div>
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 600; color: #fa8c16;">{{ log.failed_rows }}</div>
+        <div style="font-size: 13px; color: #666; margin-top: 4px;">失败/错误</div>
+    </div>
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 32px; font-weight: 600; color: #999;">{{ log.skipped_rows }}</div>
+        <div style="font-size: 13px; color: #666; margin-top: 4px;">重复跳过</div>
+    </div>
+</div>
+
+<!-- 清洗记录 -->
+{% if details.clean_records %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <span class="card-title">🧹 自动清洗记录</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="background: #f5f5f5;">
+                        <th style="padding: 10px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">行号</th>
+                        <th style="padding: 10px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">清洗内容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in details.clean_records %}
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        <td style="padding: 10px 16px; font-family: monospace; color: #666;">第 {{ record.row }} 行</td>
+                        <td style="padding: 10px 16px;">
+                            {% for change in record.changes %}
+                            <div style="color: #1890ff; margin-bottom: 2px;">• {{ change }}</div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 错误记录 -->
+{% if details.errors %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <span class="card-title">⚠️ 数据错误（{{ details.errors | length }} 条）</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="background: #fff2f0;">
+                        <th style="padding: 10px 16px; text-align: left; border-bottom: 1px solid #ffccc7;">行号</th>
+                        <th style="padding: 10px 16px; text-align: left; border-bottom: 1px solid #ffccc7;">错误原因</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for error in details.errors %}
+                    <tr style="border-bottom: 1px solid #fff2f0;">
+                        <td style="padding: 10px 16px; font-family: monospace; color: #ff4d4f;">第 {{ error.row }} 行</td>
+                        <td style="padding: 10px 16px; color: #ff4d4f;">
+                            {% for e in error.errors %}
+                            <div>• {{ e }}</div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 数据样例 -->
+{% if details.sample_data %}
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <span class="card-title">📋 清洗后数据样例（前5条）</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="background: #f5f5f5;">
+                        {% for header in details.headers %}
+                        <th style="padding: 10px 16px; text-align: left; border-bottom: 1px solid #e8e8e8; font-size: 12px; color: #666;">{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in details.sample_data %}
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        {% for header in details.headers %}
+                        <td style="padding: 10px 16px; font-size: 13px; color: #333; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                            {{ row.get(header, '') }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 操作按钮 -->
+<div style="display: flex; gap: 12px; justify-content: center; padding: 24px; background: #f5f5f5; border-radius: 8px;">
+    <form method="post" action="/import/confirm/{{ log.batch_id }}">
+        <button type="submit" class="btn btn-primary" style="padding: 12px 32px; font-size: 16px;"
+                onclick="return confirm('确认导入 {{ log.success_rows }} 条数据到数据库？')">
+            ✅ 确认导入
+        </button>
+    </form>
+    <a href="/import/" class="btn btn-default" style="padding: 12px 32px; font-size: 16px; text-decoration: none;">
+        ❌ 取消返回
+    </a>
+</div>
+
+<style>
+.btn {
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+    border: none;
+}
+.btn-primary {
+    background: #1890ff;
+    color: #fff;
+}
+.btn-default {
+    background: #fff;
+    color: #666;
+    border: 1px solid #d9d9d9;
+}
+</style>
+{% endblock %}

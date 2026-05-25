@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}导入日志 - 系统管理中心{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">📋 导入日志</h1>
+            <p style="color: #666; font-size: 14px;">查看所有数据导入历史记录</p>
+        </div>
+        <a href="/import/" class="btn btn-default">← 返回导入首页</a>
+    </div>
+</div>
+
+<!-- 日志列表 -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        {% if logs %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="background: #f5f5f5;">
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">批次ID</th>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">数据类型</th>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e8e8e8;">文件名</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">统计</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">操作人</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">状态</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">时间</th>
+                        <th style="padding: 12px 16px; text-align: center; border-bottom: 1px solid #e8e8e8;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        <td style="padding: 12px 16px; font-family: monospace; font-size: 12px; color: #666;">
+                            {{ log.batch_id[:8] }}...
+                        </td>
+                        <td style="padding: 12px 16px;">
+                            <span style="padding: 2px 8px; background: #e6f7ff; color: #1890ff; border-radius: 4px; font-size: 12px;">
+                                {{ log.file_type }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; font-size: 13px;">{{ log.filename or '-' }}</td>
+                        <td style="padding: 12px 16px; text-align: center; font-size: 13px;">
+                            <div style="color: #52c41a;">✅ {{ log.success_rows }} 成功</div>
+                            {% if log.failed_rows > 0 %}
+                            <div style="color: #ff4d4f;">⚠️ {{ log.failed_rows }} 失败</div>
+                            {% endif %}
+                            <div style="color: #999; font-size: 12px;">共 {{ log.total_rows }} 行</div>
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center; font-size: 13px; color: #666;">
+                            {{ log.operator_name or '-' }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; 
+                                {% if log.status == 'imported' %}background: #f6ffed; color: #52c41a;{% endif %}
+                                {% if log.status == 'preview' %}background: #e6f7ff; color: #1890ff;{% endif %}
+                                {% if log.status == 'rolled_back' %}background: #fff7e6; color: #fa8c16;{% endif %}
+                                {% if log.status == 'failed' %}background: #fff2f0; color: #ff4d4f;{% endif %}">
+                                {{ log.status_label }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center; font-size: 13px; color: #999;">
+                            <div>{{ log.created_at.strftime('%Y-%m-%d') if log.created_at else '-' }}</div>
+                            <div style="font-size: 12px;">{{ log.created_at.strftime('%H:%M:%S') if log.created_at else '' }}</div>
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            {% if log.status == 'preview' %}
+                            <a href="/import/preview/{{ log.batch_id }}" style="font-size: 13px; color: #1890ff; text-decoration: none;">预览</a>
+                            {% elif log.status == 'imported' %}
+                            <form method="post" action="/import/rollback/{{ log.batch_id }}" style="display: inline;">
+                                <button type="submit" onclick="return confirm('确定回滚本次导入？')" style="font-size: 13px; color: #ff4d4f; background: none; border: none; cursor: pointer;">
+                                    ↩️ 回滚
+                                </button>
+                            </form>
+                            {% else %}
+                            <span style="font-size: 13px; color: #999;">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        {% if pagination and pagination.pages > 1 %}
+        <div style="padding: 16px; display: flex; justify-content: center; gap: 8px;">
+            {% if pagination.has_prev %}
+            <a href="?page={{ pagination.prev_num }}" style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">上一页</a>
+            {% endif %}
+            
+            {% for page in pagination.pages_list|default([]) %}
+                {% if page == '...' %}
+                <span style="padding: 6px 12px; color: #999;">...</span>
+                {% elif page == pagination.page %}
+                <span style="padding: 6px 12px; background: #1890ff; color: #fff; border-radius: 4px; font-size: 14px;">{{ page }}</span>
+                {% else %}
+                <a href="?page={{ page }}" style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">{{ page }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if pagination.has_next %}
+            <a href="?page={{ pagination.next_num }}" style="padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; color: #666; text-decoration: none; font-size: 14px;">下一页</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div style="padding: 60px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+            <p style="color: #999; margin-bottom: 16px;">暂无导入记录</p>
+            <a href="/import/" style="padding: 8px 20px; background: #1890ff; color: #fff; border: none; border-radius: 4px; font-size: 14px; text-decoration: none; display: inline-block;">
+                📥 去导入数据
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.btn {
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+    border: none;
+}
+.btn-default {
+    background: #fff;
+    color: #666;
+    border: 1px solid #d9d9d9;
+}
+</style>
+{% endblock %}

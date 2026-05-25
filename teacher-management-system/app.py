@@ -9833,7 +9833,16 @@ try:
     app.register_blueprint(compensations_bp)
     app.register_blueprint(approvals_bp)
     app.register_blueprint(home_bp)
-    print('✅ 蓝图注册成功 (13个蓝图: classrooms, sites, api, teachers, classes, courses, students, schedules, users, categories, compensations, approvals, home)')
+    
+    # 注册导入导出蓝图 (ADR-005)
+    try:
+        from routes.import import import_bp
+        app.register_blueprint(import_bp)
+        print('✅ 导入导出蓝图注册成功')
+    except Exception as e:
+        print(f'⚠️ 导入导出蓝图注册失败: {e}')
+    
+    print('✅ 蓝图注册成功 (14个蓝图: classrooms, sites, api, teachers, classes, courses, students, schedules, users, categories, compensations, approvals, home, import)')
 except Exception as e:
     print(f'⚠️ 蓝图注册失败: {e}')
 

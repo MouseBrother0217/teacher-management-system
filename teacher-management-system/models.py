@@ -414,3 +414,68 @@ class OperationLog(db.Model):
     
     def __repr__(self):
         return f'<OperationLog {self.username} {self.action} {self.target_type}:{self.target_id}>'
+
+
+class ImportLog(db.Model):
+    """
+    数据导入日志表
+    记录每次数据导入的批次信息，支持回滚
+    """
+    __tablename__ = 'import_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # 批次信息
+    batch_id = db.Column(db.String(36), unique=True, nullable=False, comment='导入批次UUID')
+    filename = db.Column(db.String(255), comment='原始文件名')
+    file_type = db.Column(db.Enum('teachers', 'classrooms', 'sites', 'students', 'courses', name='import_file_type'), comment='导入数据类型')
+    
+    # 导入统计
+    total_rows = db.Column(db.Integer, default=0, comment='总行数')
+    success_rows = db.Column(db.Integer, default=0, comment='成功导入数')
+    failed_rows = db.Column(db.Integer, default=0, comment='失败数')
+    skipped_rows = db.Column(db.Integer, default=0, comment='跳过数（重复）')
+    
+    # 清洗规则版本
+    clean_rules_version = db.Column(db.String(20), default='1.0', comment='清洗规则版本')
+    
+    # 操作人
+    operator_id = db.Column(db.Integer, db.ForeignKey('users.id'), comment='操作人ID')
+    operator_name = db.Column(db.String(50), comment='操作人姓名')
+    
+    # 状态
+    status = db.Column(db.Enum('preview', 'imported', 'rolled_back', 'failed', name='import_status'), default='preview', comment='导入状态')
+    
+    # 导入详情（JSON格式：失败原因、清洗记录等）
+    details = db.Column(db.Text, comment='导入详情JSON')
+    
+    # 时间戳
+    created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
+    imported_at = db.Column(db.DateTime, comment='实际导入时间')
+    rolled_back_at = db.Column(db.DateTime, comment='回滚时间')
+    
+    # 关联
+    operator = db.relationship('User', backref='imports')
+    
+    def __repr__(self):
+        return f'<ImportLog {self.batch_id} {self.file_type} {self.status}>'
+    
+    @property
+    def status_label(self):
+        labels = {
+            'preview': '预览中',
+            'imported': '已导入',
+            'rolled_back': '已回滚',
+            'failed': '失败'
+        }
+        return labels.get(self.status, self.status)
+    
+    @property
+    def status_color(self):
+        colors = {
+            'preview': 'blue',
+            'imported': 'green',
+            'rolled_back': 'orange',
+            'failed': 'red'
+        }
+        return colors.get(self.status, 'gray')
