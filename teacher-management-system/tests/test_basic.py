@@ -16,11 +16,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 @pytest.fixture
 def client():
     """Flask 测试客户端 fixture"""
-    from app import app
+    from app import app, db
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
-    with app.test_client() as client:
-        yield client
+    with app.app_context():
+        db.create_all()  # 确保所有数据库表已创建
+        with app.test_client() as client:
+            yield client
 
 
 @pytest.fixture
