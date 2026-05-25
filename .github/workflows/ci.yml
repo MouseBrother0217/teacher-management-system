@@ -28,6 +28,9 @@ jobs:
           pip install -r teacher-management-system/requirements.txt
           pip install pytest pytest-cov
 
+      - name: Ensure instance directory exists
+        run: mkdir -p teacher-management-system/instance
+
       - name: Run tests
         run: |
           cd teacher-management-system
