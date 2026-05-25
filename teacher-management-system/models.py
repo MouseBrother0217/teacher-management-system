@@ -416,6 +416,27 @@ class OperationLog(db.Model):
         return f'<OperationLog {self.username} {self.action} {self.target_type}:{self.target_id}>'
 
 
+class Classroom(db.Model):
+    """
+    教室表
+    存储教室和教学场地信息
+    """
+    __tablename__ = 'classrooms'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, comment='教室名称')
+    capacity = db.Column(db.Integer, comment='容纳人数')
+    type = db.Column(db.String(20), comment='类型：校内/校外')
+    campus = db.Column(db.String(50), comment='校区')
+    address = db.Column(db.String(255), comment='地址')
+    price = db.Column(db.Float, comment='价格')
+    status = db.Column(db.String(20), default='可用', comment='状态')
+    created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
+    
+    def __repr__(self):
+        return f'<Classroom {self.name}>'
+
+
 class ImportLog(db.Model):
     """
     数据导入日志表

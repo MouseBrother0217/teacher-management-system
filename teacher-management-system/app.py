@@ -18,7 +18,7 @@ app.add_template_global(datetime, 'datetime')
 app.jinja_env.globals['to_date'] = lambda d: d.date() if hasattr(d, 'date') and callable(getattr(d, 'date')) else d
 
 # 数据库配置
-from models import db, Teacher, Course, ClassInfo, TeachingRecord, Student
+from models import db, Teacher, Course, ClassInfo, TeachingRecord, Student, Classroom
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'teacher_system.db')
@@ -9599,6 +9599,29 @@ with app.app_context():
     db.create_all()
     sync_classes_to_db()
     
+    # 导入教室数据到数据库（如果表为空）
+    try:
+        from models import Classroom
+        room_count = Classroom.query.count()
+        if room_count == 0 and classrooms:
+            print('🔄 导入教室数据到数据库...')
+            for room_data in classrooms:
+                room = Classroom(
+                    id=room_data.get('id'),
+                    name=room_data.get('name', ''),
+                    capacity=room_data.get('capacity'),
+                    type=room_data.get('type', ''),
+                    campus=room_data.get('campus', ''),
+                    address=room_data.get('address', ''),
+                    price=room_data.get('price'),
+                    status=room_data.get('status', '可用')
+                )
+                db.session.add(room)
+            db.session.commit()
+            print(f'✅ 教室数据导入完成: {len(classrooms)} 条')
+    except Exception as e:
+        print(f'⚠️ 教室数据导入失败: {e}')
+    
     # 自动检测并导入基础数据
     import sqlite3
     db_path = os.path.join(basedir, 'instance', 'teacher_system.db')
@@ -9607,40 +9630,46 @@ with app.app_context():
         cursor = conn.cursor()
         
         # 检查教师数据
-        cursor.execute('SELECT COUNT(*) FROM teachers')
-        teacher_count = cursor.fetchone()[0]
-        if teacher_count == 0:
-            print('🔄 数据库教师数据为空，自动导入中...')
-            try:
-                import subprocess
-                result = subprocess.run(['python3', 'scripts/import_teachers_to_db.py'], 
-                                      cwd=basedir, capture_output=True, text=True)
-                if result.returncode == 0:
-                    print('✅ 教师数据自动导入完成')
-                else:
-                    print(f'⚠️ 教师数据导入输出: {result.stdout[-200:]}')
-            except Exception as e:
-                print(f'⚠️ 教师数据自动导入失败: {e}')
-        else:
-            print(f'✅ 教师数据已存在: {teacher_count} 条')
+        try:
+            cursor.execute('SELECT COUNT(*) FROM teachers')
+            teacher_count = cursor.fetchone()[0]
+            if teacher_count == 0:
+                print('🔄 数据库教师数据为空，自动导入中...')
+                try:
+                    import subprocess
+                    result = subprocess.run(['python3', 'scripts/import_teachers_to_db.py'], 
+                                          cwd=basedir, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        print('✅ 教师数据自动导入完成')
+                    else:
+                        print(f'⚠️ 教师数据导入输出: {result.stdout[-200:]}')
+                except Exception as e:
+                    print(f'⚠️ 教师数据自动导入失败: {e}')
+            else:
+                print(f'✅ 教师数据已存在: {teacher_count} 条')
+        except Exception as e:
+            print(f'⚠️ 检查教师数据失败: {e}')
         
         # 检查教室数据
-        cursor.execute('SELECT COUNT(*) FROM classrooms')
-        room_count = cursor.fetchone()[0]
-        if room_count == 0:
-            print('🔄 数据库教室数据为空，自动导入中...')
-            try:
-                import subprocess
-                result = subprocess.run(['python3', 'scripts/import_rooms_and_sites.py'], 
-                                      cwd=basedir, capture_output=True, text=True)
-                if result.returncode == 0:
-                    print('✅ 教室和现场教学点数据自动导入完成')
-                else:
-                    print(f'⚠️ 教室导入输出: {result.stdout[-200:]}')
-            except Exception as e:
-                print(f'⚠️ 教室数据自动导入失败: {e}')
-        else:
-            print(f'✅ 教室数据已存在: {room_count} 条')
+        try:
+            cursor.execute('SELECT COUNT(*) FROM classrooms')
+            room_count = cursor.fetchone()[0]
+            if room_count == 0:
+                print('🔄 数据库教室数据为空，自动导入中...')
+                try:
+                    import subprocess
+                    result = subprocess.run(['python3', 'scripts/import_rooms_and_sites.py'], 
+                                          cwd=basedir, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        print('✅ 教室和现场教学点数据自动导入完成')
+                    else:
+                        print(f'⚠️ 教室导入输出: {result.stdout[-200:]}')
+                except Exception as e:
+                    print(f'⚠️ 教室数据自动导入失败: {e}')
+            else:
+                print(f'✅ 教室数据已存在: {room_count} 条')
+        except Exception as e:
+            print(f'⚠️ 检查教室数据失败: {e}')
         
         conn.close()
 
